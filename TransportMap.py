@@ -57,7 +57,7 @@ class TransportMap :
 
             interval = [-1,1]
 
-            for _ in range(14) : # 2^-14 < 1e-4
+            for _ in range(30) : # 2^-14 < 1e-4
 
                 if candidate[i] > y[i] :
                     interval = [interval[0],  x[i]]
