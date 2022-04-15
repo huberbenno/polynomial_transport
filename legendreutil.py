@@ -1,12 +1,10 @@
-import time
+import time, math
 
 import numpy as np
 
 from scipy.special import legendre
 from numpy.polynomial.legendre import legvander
 from numpy.polynomial import polyutils
-
-import testutil
 
 def get_polys(m) :
     return [legendre(i)*np.sqrt((2*i + 1)/2) for i in range(m)]
@@ -55,19 +53,18 @@ def evaluate_basis(x, multiset) :
     x : np.array with shape=(d,n)
     """
 
-    indices = [multiset.IndexToMulti(i).GetVector() for i in range(multiset.Size())]
-    m = len(indices)
-    n = x.shape[1]
-    d = x.shape[0]
+    indices = multiset.asLists()
+    m = multiset.size()
+    assert(m == len(indices))
+    d, n = x.shape
 
-    van = legvander(x, max([max(i) for i in indices]))
+    # shape (d, n, max(indices)+1)
+    van = legvander(x, multiset.maxDegree)
 
-    mat = np.zeros((n, m))
-    for i in range(n) :
-        for j in range(m) :
-            mat[i,j] = np.prod([van[k,i,indices[j][k if k < len(indices[j]) else 0]] for k in range(d)])
-            mat[i,j] *= np.prod([np.sqrt((2*i + 1)/2) for i in indices[j]])
-    return mat
+    map1 = lambda l : np.sqrt((2*l + 1)/2)
+    map2 = lambda q : van[q[0],:,q[1]]
+
+    return np.array([math.prod(map(map2, enumerate(idx)))*math.prod(map(map1, idx)) for idx in indices]).T
 
 def test_integrated_products(m, x) :
     res = get_integrated_products(m, x)[1]

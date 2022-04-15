@@ -1,0 +1,14 @@
+select tar.id, mul.size, evl.l2dist
+  from surrogateevaldbo as evl
+  join surrogatedbo as sur
+    on evl.surrog_id = sur.id
+  join gaussianposteriordbo as tar
+    on sur.target_id = tar.id
+   and sur.target = 'posterior'
+  join multiindexsetanisotropicdbo as mul
+    on sur.multis_id = mul.id
+  join forwarddbo as fwd
+    on tar.forwd_id = fwd.id
+ where fwd.dim = 2
+   and fwd.noise = .01
+   and fwd.alpha = 1
