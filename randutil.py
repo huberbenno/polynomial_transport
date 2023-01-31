@@ -5,7 +5,7 @@ rng = np.random.default_rng()
 
 def points(d, n=None) :
     if n is None :
-        return rng.uniform(low=-1, high=1, size=(d,))
+        return rng.uniform(low=-1, high=1, size=(d,1))
     return rng.uniform(low=-1, high=1, size=(d,n))
 
 def covarm(d) :

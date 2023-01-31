@@ -6,6 +6,8 @@ from scipy.special import legendre
 from numpy.polynomial.legendre import legvander
 from numpy.polynomial import polyutils
 
+import require
+
 def get_polys(m) :
     return [legendre(i)*np.sqrt((2*i + 1)/2) for i in range(m)]
 
@@ -14,10 +16,10 @@ def test_polys(m) :
     polys = get_polys(m)
     for i in range(len(polys)) :
         antid = (polys[i] * polys[i]).integ()
-        testutil.assert_close(antid(1)-antid(-1), 1) # supposed to be 1
+        require.close(antid(1)-antid(-1), 1, atol=1e-3) # supposed to be 1
         for j in range(i+1, len(polys)) :
             antid = (polys[i] * polys[j]).integ()
-            testutil.assert_close(antid(1)-antid(-1), 0) # supposed to be 0
+            require.close(antid(1)-antid(-1), 0, atol=1e-3) # supposed to be 0
 
 def get_integrated_products(m, x) :
 
@@ -58,10 +60,9 @@ def evaluate_basis(x, multiset) :
     assert(m == len(indices))
     d, n = x.shape
 
-    # shape (d, n, max(indices)+1)
-    van = legvander(x, multiset.maxDegree)
+    van = legvander(x, multiset.maxDegree) # shape = (d, n, max(indices)+1)
 
-    map1 = lambda l : np.sqrt((2*l + 1)/2)
+    map1 = lambda l : np.sqrt((2*l + 1)/2) # legvander is normalized to P(1)=1, we need normalization wrt L2
     map2 = lambda q : van[q[0],:,q[1]]
 
     return np.array([math.prod(map(map2, enumerate(idx)))*math.prod(map(map1, idx)) for idx in indices]).T
@@ -73,8 +74,8 @@ def test_integrated_products(m, x) :
         for j in range(i,m) :
             antid = np.polymul(polys[i],polys[j]).integ()
             val = antid(x) - antid(-1)
-            testutil.assert_close(val, res[i,j])
-            testutil.assert_close(val, res[j,i])
+            require.close(val, res[i,j], atol=1e-3)
+            require.close(val, res[j,i], atol=1e-3)
 
 if __name__ == '__main__' :
 

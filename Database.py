@@ -30,6 +30,7 @@ class ForwardDBO(BaseModel) :
     alpha = pw.IntegerField()
     noise = pw.DoubleField()
     nquad = pw.IntegerField()
+    # TODO kernel width, extra table for convolution
 
 # ---------- Densities --------------------
 
@@ -50,12 +51,16 @@ class GaussianMmDBO(BaseModel) :
 class RosenbrockDBO(BaseModel) :
     a = pw.DoubleField()
     b = pw.DoubleField()
+    theta = pw.DoubleField()
+    centr = pw.TextField()
+    scale = pw.DoubleField()
 
 class GaussianPosteriorDBO(BaseModel) :
     forwd = pw.ForeignKeyField(ForwardDBO)
     gauss = pw.ForeignKeyField(GaussianDBO)
     truep = pw.TextField()
     xeval = pw.TextField()
+
 
 # ---------- Indexsets --------------------
 
@@ -85,6 +90,8 @@ class SurrogateDBO(BaseModel) :
     multis = pw.TextField()
     multis_id = pw.IntegerField()
     method = pw.TextField()
+    condnr = pw.DoubleField(null=True)
+    closei = pw.DoubleField(null=True)
 
     nevals = pw.IntegerField(null=True)
     coeffs = pw.TextField(null=True)
@@ -102,7 +109,7 @@ class SurrogateEvalDBO(BaseModel):
     ctime = pw.DoubleField(null=True)
 
     @staticmethod
-    def get_or_create_from_args(target, surrog, method, nevals=1000, accurc=.01, save=False, verbose=True) :
+    def get_or_create_from_args(target, surrog, method, nevals=1000, accurc=.001, save=False, verbose=True) :
         obj, is_new = SurrogateEvalDBO.get_or_create(**{'surrog' : surrog.dbo.id, 'method' : method})
         if not is_new and obj.l2dist is not None :
             return obj
@@ -112,12 +119,14 @@ class SurrogateEvalDBO(BaseModel):
         obj.l2dist = np.inf
         obj.hedist = np.inf
         variance = np.inf
-        evalsTar = np.array([])
-        evalsSur = np.array([])
+        X = np.array([])
+        Y = np.array([])
+        norm = 1 #surrog.norm if surrog.norm > 0 else 1
+        print('norm ', norm)
 
         start = time.process_time()
 
-        while variance > accurc and obj.nevals < 2**32 :
+        while variance > accurc and obj.nevals < 50000 : #2**32 :
             points = None
             if obj.method == 'mc' :
                 points = np.random.uniform(low=-1, high=1, size=(target.dim, nevals))
@@ -125,17 +134,18 @@ class SurrogateEvalDBO(BaseModel):
                 points = 2*qmc.Sobol(target.dim, scramble=False).random(nevals).T - 1
             else : assert(False)
             obj.nevals += nevals
-            l2distold = obj.l2dist
 
-            evalsTar = np.concatenate((evalsTar, target.eval(points)))
-            evalsSur = np.concatenate((evalsSur, surrog.eval(points)))
+            evalsTar = target.eval(points)
+            evalsSur = surrog.eval(points)
 
-            if np.mean(evalsTar) != 0 : evalsTar = evalsTar / np.mean(evalsTar)
-            if np.mean(evalsSur) != 0 : evalsSur = evalsSur / np.mean(evalsSur)
+            X = np.concatenate((X, ((evalsTar - evalsSur)/norm)**2))
+            Y = np.concatenate((Y, (np.sqrt(evalsTar) - np.sqrt(evalsSur))**2/norm)) #TODO check
 
-            obj.l2dist = np.sqrt(np.mean((evalsTar - evalsSur)**2))
-            obj.hedist = np.sqrt(np.mean((np.sqrt(evalsTar) - np.sqrt(evalsSur))**2))
-            variance   = np.abs(l2distold - obj.l2dist) / obj.l2dist
+            obj.l2dist = np.sqrt(np.mean(X))
+            obj.hedist = np.sqrt(np.mean(Y))
+
+            variance   = np.sqrt(np.mean((X - obj.l2dist)**2) / (obj.nevals - 1))
+            print(obj.nevals, obj.l2dist, variance)
 
         obj.ctime = time.process_time() - start
         obj.accurc = accurc

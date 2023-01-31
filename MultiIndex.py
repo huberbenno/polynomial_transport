@@ -124,8 +124,19 @@ class SparseSet(MultiIndexSet) :
         self.threshold = threshold
         if save :
             self.dbo, _ = db.MultiIndexSetAnisotropicDBO.get_or_create(
-                dim=len(weights), weight=db.to_string(weights), thresh=db.to_string(threshold))
+                dim=len(weights), weight=db.to_string(weights), thresh=threshold)
         MultiIndexSet.__init__(self, dim=len(weights), name='sparse', save=save, verbose=verbose)
+
+
+    @classmethod
+    def fromId(self, id) :
+        dbo = db.MultiIndexSetAnisotropicDBO.get_by_id(id)
+        thresh = None
+        if isinstance(dbo.thresh, float) :
+            thresh = dbo.thresh
+        else :
+            thresh = db.fr_string(dbo.thresh)[0]
+        return SparseSet(weights=db.fr_string(dbo.weight), threshold=thresh)
 
     def setup(self) :
         if self.verbose : print('setup SparseSet')
@@ -198,10 +209,13 @@ class MultiIndexTreeNode :
         self.idx = idx
         self.val = None
         self.children = []
-        if len(mlist[0]) > 0 :
-            mlist = sorted(mlist, key=lambda l : l[-1])
-            for i, l in it.groupby(mlist, lambda l : l[-1]) :
-                self.children.append(MultiIndexTreeNode(i, [li[:-1] for li in l]))
+        if len(mlist[0][1]) > 0 :
+            mlist = sorted(mlist, key=lambda l : l[1][-1])
+            for i, l in it.groupby(mlist, lambda l : l[1][-1]) :
+                self.children.append(MultiIndexTreeNode(i, [(li[0],li[1][:-1]) for li in l]))
+
+        else :
+            self.val = mlist[0][0]
 
     def print(self) :
         print(self.idx, self.val, len(self.children))
@@ -210,12 +224,10 @@ class MultiIndexTree :
 
     def __init__(self, surrogate) :
         self.maxOrders = surrogate.multis.maxOrders
-        self.root = MultiIndexTreeNode(None, surrogate.multis.asLists())
+        self.root = MultiIndexTreeNode(None, list(zip(surrogate.coeffs, surrogate.multis.asLists())))
         self.nodes = [[]] * surrogate.multis.dim + [[self.root]]
         for i in range(surrogate.multis.dim, 0, -1) :
             self.nodes[i-1] = [*it.chain.from_iterable([n.children for n in self.nodes[i]])]
-        for i, n in enumerate(self.nodes[0]) :
-            n.val = surrogate.coeffs[i]
 
     def __getitem__(self, i) :
         return self.nodes[i]

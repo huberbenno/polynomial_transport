@@ -68,14 +68,14 @@ if __name__ == '__main__' :
     x = np.linspace(-1,1,501)
 
     ax1 = plotutil.get_ax(fig, 2, 1, title='hats')
-    ax1.plot(x, [hats_cdec(xi, [1]) for xi in x], label='l=0')
+    ax1.plot(x, [hats_cdec(xi, [1]) for xi in x], label=r'$\ell=0$')
     for l in range(1,7) :
-        ax1.plot(x, [hats_cdec(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label='l={}'.format(l))
+        ax1.plot(x, [hats_cdec(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label=r'$\ell={}$'.format(l))
     ax1.legend()
 
     ax2 = plotutil.get_ax(fig, 2, 2, title='steps')
-    ax2.plot(x, [steps(xi, [1]) for xi in x], label='l=0')
+    ax2.plot(x, [steps(xi, [1]) for xi in x], label=r'$\ell=0$')
     for l in range(1,7) :
-        ax2.plot(x, [steps(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label='l={}'.format(l))
+        ax2.plot(x, [steps(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label=r'$\ell={}$'.format(l))
     ax2.legend()
     plt.show()

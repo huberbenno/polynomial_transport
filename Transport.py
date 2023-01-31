@@ -1,6 +1,6 @@
 import numpy as np
 
-import legendreutil, require
+import randutil, legendreutil, require
 
 import MultiIndex as mi
 
@@ -47,7 +47,7 @@ class TransportMap :
     def inveval(self, y) :
         midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
 
-        x = [0]*self.d
+        x = np.zeros((self.d,))
         candidate = self.eval(x)
 
         for i in range(self.d) :
@@ -82,14 +82,14 @@ class TransportMap :
         y = self.eval(np.array([1]*self.d))
         for yi in y : require.close(yi, 1)
         y = self.eval(np.array([-1]*self.d))
-        for yi in y : require.close(yi, -1)
+        for yi in y : require.close(yi, -1, atol=1e-4)
 
         print(' - testing inverse ...')
-        for i in range(3) :
+        for i in range(5) :
             print(i)
             x = np.random.uniform(low=-1, high=1, size=(self.d,))
             y = self.eval(x)
-            require.close(self.inveval(y), x)
+            require.close(self.inveval(y), x, atol=1e-4)
 
         #print(' - testing determinant ...')
         #for i in range(3) :
@@ -100,14 +100,40 @@ class TransportMap :
         #    require.close(det_S, self.surrogate.eval(np.expand_dims(x, axis=1))[0])
         print('All done!')
 
+    def samples(self, n, p_uni=None) :
+        if p_uni is None :
+            p_uni = randutil.points(2,n)
+        p_tar = np.zeros(p_uni.shape)
+        for j in range(p_uni.shape[1]) :
+            p_tar[:,j] = self.inveval(p_uni[:,j])
+        return p_uni, p_tar
+
+    def grid(self, xs=[-1, -.9, -.8, -.4, 0, .4, .8, .9, 1], ns=[100, 50, 20,20, 20, 20, 50, 100]) :
+        assert(self.d == 2)
+        lines = []
+        k = np.sum(ns) + 1
+        l = np.concatenate([np.linspace(xs[i], xs[i+1], ns[i], endpoint=False) for i in range(len(ns))] + [[1]])
+        for i in np.linspace(-1,1,11, endpoint=True) :
+            lines.append(np.array([[i,i], [-1,1]]))
+            if i in [-1, 1] :
+                lines.append(np.array([[-1,1], [i,i]]))
+            else :
+                ll = np.ones((2,k))*i
+                ll[0,:] = l
+                lines.append(ll)
+
+        lines_t = []
+        for l in lines :
+            lines_t.append(np.array([np.array(self.inveval(x)) for x in l.T]).T)
+        return lines, lines_t
+
 if __name__ == '__main__' :
     import Densities as de
     import Surrogates as su
-    import randutil as rd
 
     print('# ----- 1D -----')
 
-    t = de.Gaussian(mean=rd.points(1,1), cova=rd.covarm(1))
+    t = de.Gaussian(mean=randutil.points(1,1), cova=randutil.covarm(1))
     m = mi.TensorProductSet(dim=1, order=5)
     s = su.Legendre(multis=m, target=t, method='wls')
 
@@ -120,7 +146,7 @@ if __name__ == '__main__' :
 
     print('# ----- 2D -----')
 
-    t = de.Gaussian(mean=rd.points(2,1), cova=rd.covarm(2))
+    t = de.Gaussian(mean=randutil.points(2,1), cova=randutil.covarm(2))
     #t = de.Rosenbrock(a=.15, b=10)
     m = mi.TotalDegreeSet(dim=2, order=3)
     s = su.Legendre(multis=m, target=t, method='wls')

@@ -4,6 +4,7 @@ import time
 
 import MultiIndex as mi
 import Database as db
+import Densities as de
 
 import lejautil, legendreutil, require
 
@@ -50,21 +51,26 @@ def get_sample_points_and_weights(method, multis) :
 
 class Legendre :
 
-    def __init__(self, *, multis, target, method, save=False, verbose=False) :
+    def __init__(self, *, multis, target, method, verbose=False, save=False) :
         assert(multis.dim == target.dim)
         self.multis = multis
-        self.dbo, isnew = db.SurrogateDBO.get_or_create(
-            target=target.name, target_id=target.dbo.id, multis=multis.name, multis_id=multis.dbo.id, method=method)
-        #print(self.dbo.coeffs, isnew, target.name, target.dbo.id, multis.name, multis.dbo.id, method)
-        if not isnew and self.dbo.coeffs is not None :
-            self.coeffs = db.fr_string(self.dbo.coeffs)
-        else :
+        self.coeffs = None
+
+        if save :
+            self.dbo, isnew = db.SurrogateDBO.get_or_create(
+                target=target.name, target_id=None if not hasattr(target, 'dbo') else target.dbo.id, multis=multis.name, multis_id=multis.dbo.id, method=method)
+            if not isnew and self.dbo.coeffs is not None :
+                self.coeffs = db.fr_string(self.dbo.coeffs)
+        if self.coeffs is None :
             if verbose : print('Surrogate...', end=' ')
             start = time.process_time()
 
             points, weights = get_sample_points_and_weights(method, multis)
             rhs = np.squeeze(target.evalSqrt(points))
             lhs = legendreutil.evaluate_basis(points, multis)
+            G = np.dot(lhs.T, lhs)/multis.size() - np.eye(multis.size())
+            print(' /////////// ', multis.size(), lhs.shape, np.linalg.norm(G, ord=2))
+            if save : self.dbo.closei = np.linalg.norm(G, ord=2)
 
             #print(points.shape, weights.shape, rhs.shape, lhs.shape)
             if weights is not None:
@@ -74,15 +80,26 @@ class Legendre :
 
             self.coeffs, _, _, _ = np.linalg.lstsq(lhs, rhs, rcond=None)
 
-            self.dbo.ctime = time.process_time() - start
-            self.dbo.nevals = points.shape[1]
-            self.dbo.coeffs = db.to_string(self.coeffs)
-            self.dbo.save()
+            if lhs.size > 0 :
+                print('condition number ', np.linalg.cond(lhs))
+                if save : self.dbo.condnr = np.linalg.cond(lhs)
+            if save :
+                self.dbo.ctime = time.process_time() - start
+                self.dbo.nevals = points.shape[1]
+                self.dbo.coeffs = db.to_string(self.coeffs)
+                self.dbo.save()
             if verbose : print('Done')
 
         require.equal(self.coeffs.shape, 'coeffs.shape', (multis.size(),), 'len(multis)')
         self.norm = np.sum(self.coeffs**2)
         self.m = len(self.coeffs)
+
+    @classmethod
+    def fromDbo(self, dbo) :
+        multis = None
+        if dbo.multis == 'sparse' :
+            multis = mi.SparseSet.fromId(dbo.multis_id)
+        return Legendre(multis=multis, target=de.GaussianPosterior.fromId(dbo.target_id), method=dbo.method)
 
     def evalSqrt(self, x) :
         if isinstance(x, list) : x = np.array(x)
@@ -95,7 +112,7 @@ class Legendre :
         return self.evalSqrt(x)**2
 
     def deleteDbo(self) :
-        self.dbo.delete_instance()
+        if hasattr(self, 'dbo') : self.dbo.delete_instance()
 
     #TODO move legendreutil.evaluate_basis here
 
