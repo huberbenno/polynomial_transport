@@ -176,7 +176,7 @@ if __name__ == '__main__' :
         print('\t', t.eval(rd.points(d,1)).shape, t.eval(rd.points(d, 10)).shape)
         t.deleteDbo()
 
-        f = fw.Convolution(basis=basis.hats, dim=d, alpha=1, noise=.1, save=save)
+        f = fw.Convolution(basis=basis.hats, dim=d, alpha=1, save=save)
         xe = np.linspace(-1,1,20)
         xm = f.eval(rd.points(d,1), xe)
         pts = rd.points(d,10)

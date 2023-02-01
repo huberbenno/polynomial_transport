@@ -28,7 +28,6 @@ class ForwardDBO(BaseModel) :
     dim   = pw.IntegerField()
     basis = pw.TextField()
     alpha = pw.IntegerField()
-    noise = pw.DoubleField()
     nquad = pw.IntegerField()
     # TODO kernel width, extra table for convolution
 
