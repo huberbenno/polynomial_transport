@@ -32,9 +32,8 @@ def get_sample_points_and_weights(method, multis) :
         else :
             while ss.binom(k+1, multis.dim-1) <= 1.5 * multis.cardinality :
                 k += 1
-        m = mi.TotalDegreeSet(dim=multis.dim, order=k)
+        m = mi.TotalDegreeSet(dim=multis.dim, order=k, save=False)
         samples = lejautil.leja_points(m)
-        m.deleteDbo()
     elif method == 'wls_leggaus' :
         k = 1
         if multis.dim == 1 :
@@ -42,9 +41,8 @@ def get_sample_points_and_weights(method, multis) :
         else :
             while ss.binom(k+1, multis.dim-1) <= 1.5 * multis.cardinality :
                 k += 1
-        m = mi.TotalDegreeSet(dim=multis.dim, order=k)
+        m = mi.TotalDegreeSet(dim=multis.dim, order=k, save=False)
         samples, weights = lejautil.leggaus_points(m)
-        m.deleteDbo()
     else :
         assert(False)
     return samples, weights

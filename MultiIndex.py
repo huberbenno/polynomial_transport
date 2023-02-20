@@ -80,7 +80,7 @@ class MultiIndexSet :
             idx.print()
 
     def deleteDbo(self) :
-        self.dbo.delete_instance()
+        if hasattr(self, 'dbo') : self.dbo.delete_instance()
 
 
 class TensorProductSet(MultiIndexSet) :
@@ -178,7 +178,7 @@ class SparseSet(MultiIndexSet) :
         return idx
 
     @classmethod
-    def withSize(cls, *, weights, n, t=1, verbose=False) :
+    def withSize(cls, *, weights, n, t=1, save=False, verbose=False) :
         tupper = None
         tlower = None
         m = SparseSet(weights=weights, threshold=t, save=False, verbose=verbose)
@@ -199,7 +199,7 @@ class SparseSet(MultiIndexSet) :
                 #m.deleteDbo()
                 m = SparseSet(weights=weights, threshold=t, save=False, verbose=verbose)
         #print(m.cardinality, n, t, m.threshold)
-        return SparseSet(weights=weights, threshold=t, verbose=verbose)
+        return SparseSet(weights=weights, threshold=t, save=save, verbose=verbose)
 
 # ---------- Trees --------------------
 
@@ -235,19 +235,19 @@ class MultiIndexTree :
 
 if __name__ == '__main__' :
 
-    m = SparseSet.withSize(weights=[.6], n=5, t=32)
+    m = SparseSet.withSize(weights=[.6], n=5, t=32, save=True)
     assert(m.cardinality == 5)
     m.deleteDbo()
 
-    m = SparseSet.withSize(weights=[.6, .4], n=27, t=60)
+    m = SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=True)
     assert(m.cardinality == 27)
     m.deleteDbo()
 
-    m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60)
+    m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=True)
     assert(m.cardinality == 31)
     m.deleteDbo()
 
-    m = TensorProductSet(dim=1, order=5)
+    m = TensorProductSet(dim=1, order=5, save=True)
     assert(m.cardinality == 6)
     m.deleteDbo()
 
@@ -267,6 +267,6 @@ if __name__ == '__main__' :
     assert(m.cardinality == 21)
     m.deleteDbo()
 
-    m = TotalDegreeSet(dim=3, order=5)
+    m = TotalDegreeSet(dim=3, order=5, save=True)
     assert(m.cardinality == 56)
     m.deleteDbo()
