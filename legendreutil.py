@@ -65,7 +65,7 @@ def evaluate_basis(x, multiset) :
     map1 = lambda l : np.sqrt((2*l + 1)/2) # legvander is normalized to P(1)=1, we need normalization wrt L2
     map2 = lambda q : van[q[0],:,q[1]]
 
-    return np.array([math.prod(map(map2, enumerate(idx)))*math.prod(map(map1, idx)) for idx in indices]).T
+    return np.array([math.prod(map(map1, idx))*math.prod(map(map2, enumerate(idx))) for idx in indices]).T
 
 def test_integrated_products(m, x) :
     res = get_integrated_products(m, x)[1]
