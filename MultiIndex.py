@@ -3,6 +3,7 @@ import itertools as it
 import time, copy, math
 
 import Database as db
+import require
 
 class MultiIndex :
 
@@ -74,6 +75,26 @@ class MultiIndexSet :
     def size(self) : return len(self.idxs)
 
     def asLists(self) : return [i.asList() for i in self.idxs]
+
+    def getWeights(self) :
+        idxs = np.array(self.asLists())
+        weights = np.zeros((idxs.shape[0],))
+        for i in range(idxs.shape[0]) :
+            for e in it.product([0,1], repeat=self.dim) :
+                if np.equal(idxs, idxs[i]+e).all(1).any() :
+                    weights[i] += (-1)**sum(e)
+        return weights
+
+    def getFrontier(self) :
+        return [i for i,w in zip(self.asLists(),self.getWeights()) if w != 0]
+
+    def getSparseGrid(self, points) :
+        points = np.vstack([[x for x in it.product(*[points(l+1) for l in list(idx)])] for idx in self.getFrontier()])
+        require.equal(self.getSparseGridSize(), 'self.getSparseGridSize', len(points), 'len(points)')
+        return points.T
+
+    def getSparseGridSize(self) :
+        return np.sum([np.prod([(l+1) for l in idx]) for idx in self.getFrontier()])
 
     def print(self) :
         for idx in self.idxs :
@@ -234,6 +255,13 @@ class MultiIndexTree :
 
 
 if __name__ == '__main__' :
+
+    m = SparseSet.withSize(weights=[.6, .4], n=13, t=60, save=False)
+    w = m.getWeights()
+    for i, wi in enumerate(w) :
+        print(m[i].asList(), wi)
+    print(m.getFrontier())
+    print(m.getSparseGrid(lambda kmax : [np.cos((2*k+1)*np.pi/2/kmax) for k in range(kmax)]))
 
     m = SparseSet.withSize(weights=[.6], n=5, t=32, save=True)
     assert(m.cardinality == 5)
