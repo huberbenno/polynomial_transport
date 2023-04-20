@@ -1,11 +1,13 @@
 rm data.db
 
-python Database.py
+python Database.py  || exit
 
-python Densities.py
+python Forward.py  || exit
 
-python MultiIndex.py
+python Densities.py  || exit
 
-python Surrogates.py
+python MultiIndex.py || exit
 
-python Transport.py
+python Surrogates.py || exit
+
+python Transport.py || exit
