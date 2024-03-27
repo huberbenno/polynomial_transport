@@ -50,22 +50,28 @@ def get_integrated_products(m, x) :
 
     return p_x[:-1], res[:-1, :-1]
 
-def evaluate_basis(x, multiset) :
+def evaluate_basis(x, multis, mode='') :
     """
     x : np.array with shape=(d,n)
     """
 
-    indices = multiset.asLists()
-    m = multiset.size()
-    assert(m == len(indices))
-    d, n = x.shape
+    if mode == 'old' :
+        indices = multis.asLists()
+        m = multis.size()
+        assert(m == len(indices))
+        d, n = x.shape
 
-    van = legvander(x, multiset.maxDegree) # shape = (d, n, max(indices)+1)
+        van = legvander(x, multis.maxDegree) # shape = (d, n, max(indices)+1)
 
-    map1 = lambda l : np.sqrt((2*l + 1)/2) # legvander is normalized to P(1)=1, we need normalization wrt L2
-    map2 = lambda q : van[q[0],:,q[1]]
+        map1 = lambda l : np.sqrt((2*l + 1)/2) # legvander is normalized to P(1)=1, we need normalization wrt L2
+        map2 = lambda q : van[q[0],:,q[1]]
 
-    return np.array([math.prod(map(map1, idx))*math.prod(map(map2, enumerate(idx))) for idx in indices]).T
+        return np.array([math.prod(map(map1, idx))*math.prod(map(map2, enumerate(idx))) for idx in indices]).T
+
+    I = np.array(multis.asLists()) # shape = (d, n)
+    V = legvander(x, multis.maxDegree) # shape = (d, n, multis.maxDegree+1)
+    R = np.prod([V[i,:,I[:,i]] for i in range(multis.dim)], axis=0).T # shape = (n,m)
+    return np.multiply(R,multis.getWeightsForLegendreL2Normalization())
 
 def test_integrated_products(m, x) :
     res = get_integrated_products(m, x)[1]
@@ -78,9 +84,19 @@ def test_integrated_products(m, x) :
             require.close(val, res[j,i], atol=1e-3)
 
 if __name__ == '__main__' :
+    from MultiIndex import *
+    import randutil
 
-    start = time.process_time()
+    multis = SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
+    x = randutil.points(multis.dim,1)
+    r_old = evaluate_basis(x, multis, 'old')
+    r_new = evaluate_basis(x, multis)
+    print(r_old)
+    print(r_new)
+    print(r_old.dtype, r_new.dtype)
+
+    """start = time.process_time()
     test_polys(20)
     for x in np.linspace(-1,1,123) :
         test_integrated_products(20, x)
-    print('Time: ', time.process_time() - start)
+    print('Time: ', time.process_time() - start)"""

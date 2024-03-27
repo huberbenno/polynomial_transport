@@ -3,4 +3,4 @@
 __pycache__
 .idea
 .pkl
-
+data.db

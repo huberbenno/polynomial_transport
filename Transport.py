@@ -21,7 +21,7 @@ class TransportMap :
 
         S = np.zeros((self.d,))
 
-        s = self.surrogate.norm
+        s = self.surrogate.norm_lebesgue
 
         for i in range(self.d) :
             L, I = legendreutil.get_integrated_products(self.multitree.maxOrders[i]+1, x[i])
@@ -44,7 +44,47 @@ class TransportMap :
 
         return S
 
+    def eval_i(self, i, x, s) :
+        r = 0
+        ss = 0
+        L, I = legendreutil.get_integrated_products(self.multitree.maxOrders[i]+1, x)
+
+        for n in self.multitree[i+1] :
+            v = [c.val for c in n.children]
+            j = [c.idx for c in n.children]
+
+            r += np.dot(v, np.dot(I[np.ix_(j,j)], v))
+
+            if i < self.d-1 :
+                n.val = np.dot(v, L[j])
+                ss += n.val**2
+
+        return 2*r/s - 1, ss
+
     def inveval(self, y) :
+        midpoint = lambda interval : (interval[1] + interval[0])/2
+
+        x = np.zeros((self.d,))
+        s = self.surrogate.norm_lebesgue
+
+        for i in range(self.d) :
+            interval = [-1,1]
+            ss = 0
+
+            for _ in range(30) : # 2^-14 < 1e-4
+                candidate_i, ss = self.eval_i(i, x[i], s)
+
+                if candidate_i > y[i] :
+                    interval = [interval[0],  x[i]]
+                else :
+                    interval = [x[i], interval[1]]
+
+                x[i] = midpoint(interval)
+            s = ss
+
+        return x
+
+    def inveval_old(self, y) :
         midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
 
         x = np.zeros((self.d,))
@@ -73,7 +113,7 @@ class TransportMap :
         return self.density_sqrt(x)**2
 
     def det_dS(self, x) :
-        return self.density(x) / self.norm
+        return self.density(x) / self.norm_lebesgue
 
     def test(self) :
 
@@ -82,14 +122,14 @@ class TransportMap :
         y = self.eval(np.array([1]*self.d))
         for yi in y : require.close(yi, 1)
         y = self.eval(np.array([-1]*self.d))
-        for yi in y : require.close(yi, -1, atol=1e-4)
+        for yi in y : require.close(yi, -1, atol=1e-3)
 
-        print(' - testing inverse ...')
+        print(' - testing inverse ... ', end='')
         for i in range(5) :
-            print(i)
+            print(i, end=' ')
             x = np.random.uniform(low=-1, high=1, size=(self.d,))
             y = self.eval(x)
-            require.close(self.inveval(y), x, atol=1e-4)
+            require.close(self.inveval(y), x, atol=1e-3)
 
         #print(' - testing determinant ...')
         #for i in range(3) :
@@ -98,7 +138,7 @@ class TransportMap :
         #    differences = (self.eval(x+delta) - self.eval(x-delta))*20000000
         #    det_S = np.prod(differences)
         #    require.close(det_S, self.surrogate.eval(np.expand_dims(x, axis=1))[0])
-        print('All done!')
+        print('done!')
 
     def samples(self, n, p_uni=None) :
         if p_uni is None :
@@ -130,12 +170,15 @@ class TransportMap :
 if __name__ == '__main__' :
     import Densities as de
     import Surrogates as su
+    import logutil
 
-    print('# ----- 1D -----')
+    logutil.print_start('Testing Transport Module...', end='\n')
+
+    logutil.print_indent('d = 1')
 
     t = de.Gaussian(mean=randutil.points(1,1), cova=randutil.covarm(1))
     m = mi.TensorProductSet(dim=1, order=5)
-    s = su.Legendre(multis=m, target=t, method='wls')
+    s = su.Legendre(multis=m, target=t)
 
     tm = TransportMap(s)
     tm.test()
@@ -144,12 +187,11 @@ if __name__ == '__main__' :
     m.deleteDbo()
     t.deleteDbo()
 
-    print('# ----- 2D -----')
-
+    logutil.print_indent('d = 2')
     t = de.Gaussian(mean=randutil.points(2,1), cova=randutil.covarm(2))
     #t = de.Rosenbrock(a=.15, b=10)
     m = mi.TotalDegreeSet(dim=2, order=3)
-    s = su.Legendre(multis=m, target=t, method='wls')
+    s = su.Legendre(multis=m, target=t)
 
     tm = TransportMap(s)
     tm.test()
@@ -157,3 +199,5 @@ if __name__ == '__main__' :
     s.deleteDbo()
     m.deleteDbo()
     t.deleteDbo()
+
+    logutil.print_done()

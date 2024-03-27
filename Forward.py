@@ -1,50 +1,86 @@
 import numpy as np
+from scipy.integrate import solve_ivp
 
 import basis
 import Database as db
 
+import require
 
-class Convolution :
+class Forward :
 
-    def __init__(self, *, basis, dim, alpha, x_measurement=None, k_width=10, n_quad=10, save=False) :
-        self.basis = basis
+    def __init__(self, *, dim) :
         self.dim   = dim
+
+    def eval(self, p, **kwargs) :
+        if isinstance(p, list) : p = np.array(p)
+        require.equal(p.shape[0], self.dim, 'p.shape[0]', 'self.dim')
+
+        res = self.__eval__(p, **kwargs)
+
+        assert(isinstance(res, np.ndarray))
+        assert(len(res.shape) == len(p.shape))
+        if len(p.shape) > 1 :
+            assert(res.shape[1] == p.shape[1])
+
+        return res
+
+class Convolution(Forward) :
+    ''' Convolution of a function $f : [-1,1] -> [-1,1]$ expressed in some basis $(b_i)_{i=1}^d$ (i.e. $f(x) = \sum_{i=1}^d p_i b_i(x)$) with an exponential kernel $k(x) = exp(-wx)$ of given width $w$.
+        $(f * k)(x) = \int_{-1}^{1} f(t) k(x-t) dt$
+    '''
+
+    def __init__(self, *, dim, basis, alpha, wkern=10, nquad=100, xmeas=None, save=False) :
+        ''' dim   (int > 0)  : number of basis functions
+            basis (function) : any of the basis functions specified in the basis module
+            alpha (float)    :
+            wkern (float)    :
+            nquad (int > 1)  :
+            xmeas (np.array) : value(s) $x$ at which to compute $(f * k)(x)$
+        '''
+        Forward.__init__(self, dim=dim)
+        self.basis = basis
         self.alpha = alpha
-        self.k_width = k_width
+        self.wkern = wkern
         self.n = int(2**np.ceil(np.log2(dim))) # next greater power of two
 
-        x_quad, w_quad = np.polynomial.legendre.leggauss(n_quad)
+        # Approximate the integral of the convolution by quadrature
+        x_quad, w_quad = np.polynomial.legendre.leggauss(nquad)
         self.x_quad = np.concatenate([x_quad/self.n - 1 + (2*i+1)/self.n for i in range(self.n)])
         self.w_quad = np.concatenate([w_quad for i in range(self.n)])
+        #TODO weights need to multiply interval length
 
+        # If xmeas=$x$ is specified, construct matrix M specified by $M_ij = (b_i * k)(x_j)$. Since convolution is a linear operation, such M allows to compute $(f * k)(x) = Mp$ for $f$ given as $f = \sum_{i=1}^d p_i b_i$.
         self.M = None
-        if x_measurement is not None :
-            self.M = np.zeros((len(x_measurement), dim))
+        if xmeas is not None :
+            self.xmeas = xmeas
+            self.M = np.zeros((len(xmeas), dim))
             for j in range(dim) :
-                q_x = np.array([w * self.basis(x, [0]*j + [1], self.alpha) for x,w in zip(self.x_quad, self.w_quad)])
-
-                for i in range(len(x_measurement)) :
-                    e_x = np.array([np.exp(-self.k_width*(x_measurement[i] - xj)**2) for xj in self.x_quad])
-                    self.M[i, j] = np.dot(q_x.T, e_x) / self.n
+                # Vector of weighted evaluations of the j-th basis functions at the quadrature nodes
+                q_x = np.array([w * self.basis(x, [0]*j + [1], self.alpha) for x,w in zip(self.x_quad, self.w_quad)]).T
+                for i in range(len(xmeas)) :
+                    e_x = np.array([np.exp(-self.wkern*(xmeas[i] - xj)**2) for xj in self.x_quad])
+                    self.M[i, j] = np.dot(q_x, e_x) / self.n
 
         if save :
-            self.dbo, isnew = db.ForwardDBO.get_or_create(
-                dim=dim, basis=basis.__name__, alpha=alpha, nquad=n_quad)
+            self.dbo, isnew = db.ConvolutionDBO.get_or_create(
+                dim=dim, basis=basis.__name__, alpha=alpha, nquad=nquad, wkern=wkern)
 
+    def dimWeights(self) :
+        return [2**(-self.alpha*np.ceil(np.log2(i+1))) for i in range(1,self.dim+1)]
 
-    def eval(self, p, x_eval=None) :
-        assert(self.M is not None or x_eval is not None)
+    def __eval__(self, p, xmeas=None) :
+        assert(self.M is not None or xmeas is not None)
         assert(p.shape[0] == self.dim)
 
-        if x_eval is None :
+        if xmeas is None :
             return np.dot(self.M, p)
 
         assert(len(p.shape) == 1 or p.shape[1] == 1)
         q_x = np.array([w * self.basis(x, p, self.alpha) for x,w in zip(self.x_quad, self.w_quad)])
 
-        res = np.zeros((len(x_eval),1))
-        for i in range(len(x_eval)) :
-            e_x = np.array([np.exp(-self.k_width*(x_eval[i] - xj)**2) for xj in self.x_quad])
+        res = np.zeros((len(xmeas),1))
+        for i in range(len(xmeas)) :
+            e_x = np.array([np.exp(-self.wkern*(xmeas[i] - xj)**2) for xj in self.x_quad])
             res[i] = np.dot(q_x.T, e_x) / self.n
 
         return res
@@ -54,25 +90,31 @@ class Convolution :
 
     @classmethod
     def fromId(self, id) :
-        dbo = db.ForwardDBO.get_by_id(id)
+        dbo = db.ConvolutionDBO.get_by_id(id)
         return Convolution(basis=getattr(basis, dbo.basis), dim=dbo.dim, alpha=dbo.alpha,
-                           n_quad=dbo.nquad, save=True)
+                           nquad=dbo.nquad, save=True)
+
+
 
 if __name__ == '__main__' :
-    import randutil, require
+    import randutil, logutil
+    logutil.print_start('Testing Forward Module...', end='\n')
 
-    save = False
-    dim = 13
+    dim = randutil.rng.integers(low=1, high=10)
+    logutil.print_indent(' Testing Convolution with dimension {}'.format(dim))
+
     x = np.linspace(-1,1,20)
     p = randutil.points(dim)
 
-    f = Convolution(basis=basis.hats, dim=dim, alpha=1, x_measurement=x, save=save)
+    for save in [True, False] :
+        f = Convolution(basis=basis.hats, dim=dim, alpha=1, xmeas=x, save=save)
 
-    res1 = f.eval(p)
-    res2 = f.eval(p, x_eval=x)
-    for i in range(len(res1)) :
-        require.close(res1[i], res2[i])
+        res1 = f.eval(p)
+        res2 = f.eval(p, xmeas=x)
+        require.close(res1, res2)
 
-    if save :
-        f2 = Convolution.fromId(f.dbo.id)
-    f.deleteDbo()
+        if save :
+            f2 = Convolution.fromId(f.dbo.id)
+        f.deleteDbo()
+
+    logutil.print_done()

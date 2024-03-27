@@ -20,7 +20,7 @@ class MultiIndex :
     def print(self) :
         print(self.idxs)
 
-class MultiIndexCompressed :
+class MultiIndexSparse :
 
     def __init__(self, ilist=[]) :
         self.d = len(ilist)
@@ -54,6 +54,7 @@ class MultiIndexSet :
         self.setup()
         self.maxDegree = max(self.maxOrders)
         self.cardinality = len(self.idxs)
+        self.weightsForLegendreL2Normalization = None
 
         if save :
             self.dbo.ctime = time.process_time() - start
@@ -90,7 +91,7 @@ class MultiIndexSet :
 
     def getSparseGrid(self, points) :
         points = np.vstack([[x for x in it.product(*[points(l+1) for l in list(idx)])] for idx in self.getFrontier()])
-        require.equal(self.getSparseGridSize(), 'self.getSparseGridSize', len(points), 'len(points)')
+        require.equal(self.getSparseGridSize(), len(points), 'self.getSparseGridSize', 'len(points)')
         return points.T
 
     def getSparseGridSize(self) :
@@ -99,6 +100,11 @@ class MultiIndexSet :
     def print(self) :
         for idx in self.idxs :
             idx.print()
+
+    def getWeightsForLegendreL2Normalization(self) :
+        if self.weightsForLegendreL2Normalization is None :
+            self.weightsForLegendreL2Normalization = np.array([np.prod([np.sqrt((2*l + 1)/2) for l in idx]) for idx in self.idxs])
+        return self.weightsForLegendreL2Normalization
 
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
@@ -200,27 +206,29 @@ class SparseSet(MultiIndexSet) :
 
     @classmethod
     def withSize(cls, *, weights, n, t=1, save=False, verbose=False) :
+        if verbose > 0 : print('\t SETUP SparseSet.withSize(n={})'.format(n))
         tupper = None
         tlower = None
-        m = SparseSet(weights=weights, threshold=t, save=False, verbose=verbose)
+        m = SparseSet(weights=weights, threshold=t, save=False, verbose=False)
         niter = 0
         while m.cardinality != n :
             niter += 1
             if niter > 100 :#and m.cardinality > .9 * n and m.cardinality < 1.1 * n :
                 break
-            if verbose : print(n, m.cardinality, tlower, t, tupper)
+            if verbose > 1 : print('\t\t', n, m.cardinality, tlower, t, tupper)
             if m.cardinality < n :
                 tupper = t
                 t = t/2 if tlower == None else (tlower + t)/2
                 #m.deleteDbo()
-                m = SparseSet(weights=weights, threshold=t, save=False, verbose=verbose)
+                m = SparseSet(weights=weights, threshold=t, save=False, verbose=False)
             elif m.cardinality > n :
                 tlower = t
                 t = t*2 if tupper == None else (tupper + t)/2
                 #m.deleteDbo()
-                m = SparseSet(weights=weights, threshold=t, save=False, verbose=verbose)
+                m = SparseSet(weights=weights, threshold=t, save=False, verbose=False)
         #print(m.cardinality, n, t, m.threshold)
-        return SparseSet(weights=weights, threshold=t, save=save, verbose=verbose)
+        if verbose > 0 : print('\t SETUP SparseSet DONE.', n, m.cardinality)
+        return SparseSet(weights=weights, threshold=t, save=save, verbose=False)
 
 # ---------- Trees --------------------
 
@@ -255,46 +263,52 @@ class MultiIndexTree :
 
 
 if __name__ == '__main__' :
+    import logutil
 
-    m = SparseSet.withSize(weights=[.6, .4], n=13, t=60, save=False)
-    w = m.getWeights()
-    for i, wi in enumerate(w) :
-        print(m[i].asList(), wi)
-    print(m.getFrontier())
-    print(m.getSparseGrid(lambda kmax : [np.cos((2*k+1)*np.pi/2/kmax) for k in range(kmax)]))
+    logutil.print_start('Testing Multiindex Module...', end='\n')
 
-    m = SparseSet.withSize(weights=[.6], n=5, t=32, save=True)
-    assert(m.cardinality == 5)
-    m.deleteDbo()
+    for save in [True, False] :
+        #m = SparseSet.withSize(weights=[.6, .4], n=13, t=60, save=save)
+        #w = m.getWeights()
+        #for i, wi in enumerate(w) :
+        #    print(m[i].asList(), wi)
+        #print(m.getFrontier())
+        #print(m.getSparseGrid(lambda kmax : [np.cos((2*k+1)*np.pi/2/kmax) for k in range(kmax)]))
 
-    m = SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=True)
-    assert(m.cardinality == 27)
-    m.deleteDbo()
+        m = SparseSet.withSize(weights=[.6], n=5, t=32, save=save)
+        assert(m.cardinality == 5)
+        if save : m.deleteDbo()
 
-    m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=True)
-    assert(m.cardinality == 31)
-    m.deleteDbo()
+        m = SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=save)
+        assert(m.cardinality == 27)
+        m.deleteDbo()
 
-    m = TensorProductSet(dim=1, order=5, save=True)
-    assert(m.cardinality == 6)
-    m.deleteDbo()
+        m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=save)
+        assert(m.cardinality == 31)
+        m.deleteDbo()
 
-    m = TensorProductSet(dim=2, order=5)
-    assert(m.cardinality == 36)
-    m.deleteDbo()
+        m = TensorProductSet(dim=1, order=5, save=save)
+        assert(m.cardinality == 6)
+        if save : m.deleteDbo()
 
-    m = TensorProductSet(dim=3, order=5)
-    assert(m.cardinality == 216)
-    m.deleteDbo()
+        m = TensorProductSet(dim=2, order=5, save=save)
+        assert(m.cardinality == 36)
+        m.deleteDbo()
 
-    m = TotalDegreeSet(dim=1, order=5)
-    assert(m.cardinality == 6)
-    m.deleteDbo()
+        m = TensorProductSet(dim=3, order=5, save=save)
+        assert(m.cardinality == 216)
+        m.deleteDbo()
 
-    m = TotalDegreeSet(dim=2, order=5)
-    assert(m.cardinality == 21)
-    m.deleteDbo()
+        m = TotalDegreeSet(dim=1, order=5, save=save)
+        assert(m.cardinality == 6)
+        if save : m.deleteDbo()
 
-    m = TotalDegreeSet(dim=3, order=5, save=True)
-    assert(m.cardinality == 56)
-    m.deleteDbo()
+        m = TotalDegreeSet(dim=2, order=5, save=save)
+        assert(m.cardinality == 21)
+        m.deleteDbo()
+
+        m = TotalDegreeSet(dim=3, order=5, save=save)
+        assert(m.cardinality == 56)
+        m.deleteDbo()
+
+        logutil.print_done()

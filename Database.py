@@ -24,12 +24,12 @@ class BaseModel(pw.Model) :
 
 # ---------- Forward Models --------------------
 
-class ForwardDBO(BaseModel) :
+class ConvolutionDBO(BaseModel) :
     dim   = pw.IntegerField()
     basis = pw.TextField()
     alpha = pw.IntegerField()
     nquad = pw.IntegerField()
-    # TODO kernel width, extra table for convolution
+    wkern = pw.DoubleField()
 
 # ---------- Densities --------------------
 
@@ -38,6 +38,9 @@ class GaussianDBO(BaseModel) :
     mean = pw.TextField()
     cova = pw.TextField()
     diag = pw.BooleanField()
+
+    def recover_cova(self) :
+        return fr_string(self.cova).reshape((self.dim, self.dim))
 
 class GaussianMmDBO(BaseModel) :
     dim  = pw.IntegerField()
@@ -55,11 +58,11 @@ class RosenbrockDBO(BaseModel) :
     scale = pw.DoubleField()
 
 class GaussianPosteriorDBO(BaseModel) :
-    forwd = pw.ForeignKeyField(ForwardDBO)
+    forwd = pw.ForeignKeyField(ConvolutionDBO)
     gauss = pw.ForeignKeyField(GaussianDBO)
     truep = pw.TextField()
-    xeval = pw.TextField()
-
+    noise = pw.DoubleField()
+    xmeas = pw.TextField()
 
 # ---------- Indexsets --------------------
 
@@ -80,7 +83,6 @@ class MultiIndexSetAnisotropicDBO(BaseModel) :
     size   = pw.IntegerField(null=True)
     ctime  = pw.DoubleField(null=True)
 
-
 # ---------- Surrogate --------------------
 
 class SurrogateDBO(BaseModel) :
@@ -88,7 +90,8 @@ class SurrogateDBO(BaseModel) :
     target_id = pw.IntegerField()
     multis = pw.TextField()
     multis_id = pw.IntegerField()
-    method = pw.TextField()
+    pmode  = pw.TextField()
+    #TODO pmode_det
     condnr = pw.DoubleField(null=True)
     closei = pw.DoubleField(null=True)
 
@@ -98,68 +101,20 @@ class SurrogateDBO(BaseModel) :
 
 class SurrogateEvalDBO(BaseModel):
     surrog = pw.ForeignKeyField(SurrogateDBO, backref='evals')
-    method = pw.TextField()
 
     # Data
-    l2dist = pw.DoubleField(null=True)
+    approx = pw.DoubleField(null=True)
     hedist = pw.DoubleField(null=True)
     nevals = pw.IntegerField(null=True)
     accurc = pw.DoubleField(null=True)
     ctime = pw.DoubleField(null=True)
 
-    @staticmethod
-    def get_or_create_from_args(target, surrog, method, nevals=1000, accurc=.001, save=False, verbose=True) :
-        obj, is_new = SurrogateEvalDBO.get_or_create(**{'surrog' : surrog.dbo.id, 'method' : method})
-        if not is_new and obj.l2dist is not None :
-            return obj
-
-        if verbose : print('Evaluation....', end=' ')
-        obj.nevals = 0
-        obj.l2dist = np.inf
-        obj.hedist = np.inf
-        variance = np.inf
-        X = np.array([])
-        Y = np.array([])
-        norm = 1 #surrog.norm if surrog.norm > 0 else 1
-        print('norm ', norm)
-
-        start = time.process_time()
-
-        while variance > accurc and obj.nevals < 50000 : #2**32 :
-            points = None
-            if obj.method == 'mc' :
-                points = np.random.uniform(low=-1, high=1, size=(target.dim, nevals))
-            elif obj.method == 'sobol' :
-                points = 2*qmc.Sobol(target.dim, scramble=False).random(nevals).T - 1
-            else : assert(False)
-            obj.nevals += nevals
-
-            evalsTar = target.eval(points)
-            evalsSur = surrog.eval(points)
-
-            X = np.concatenate((X, ((evalsTar - evalsSur)/norm)**2))
-            Y = np.concatenate((Y, (np.sqrt(evalsTar) - np.sqrt(evalsSur))**2/norm)) #TODO check
-
-            obj.l2dist = np.sqrt(np.mean(X))
-            obj.hedist = np.sqrt(np.mean(Y))
-
-            variance   = np.sqrt(np.mean((X - obj.l2dist)**2) / (obj.nevals - 1))
-            print(obj.nevals, obj.l2dist, variance)
-
-        obj.ctime = time.process_time() - start
-        obj.accurc = accurc
-
-        if save :
-            obj.save()
-
-        if verbose : print('Done')
-        return obj
-
 
 if __name__ == '__main__' :
-    DB.connect()
-    DB.create_tables([ForwardDBO, GaussianDBO, GaussianMmDBO, GaussianPosteriorDBO, RosenbrockDBO, MultiIndexSetDBO,
-                      MultiIndexSetAnisotropicDBO, SurrogateDBO, SurrogateEvalDBO])
+    import logutil
 
-    args = {'dim' : 1, 'mean' : .1, 'cova' : .1, 'mode' : 'sum', 'order' : 5, 'methodAppr' : 'wls', 'methodEval' : 'mc'}
-    #args = {'dim' : 2, 'mean' : [.1, .4], 'cova' : [[.5, 0], [0, .2]], 'mode' : 'sum', 'order' : 5, 'methodAppr' : 'wls'}
+    logutil.print_start('Setting up database...')
+    DB.connect()
+    DB.create_tables([ConvolutionDBO, GaussianDBO, GaussianMmDBO, GaussianPosteriorDBO, RosenbrockDBO, MultiIndexSetDBO,
+                      MultiIndexSetAnisotropicDBO, SurrogateDBO, SurrogateEvalDBO])
+    logutil.print_done_ctd()

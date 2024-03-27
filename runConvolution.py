@@ -1,34 +1,35 @@
 #!/usr/bin/python3
 import sys, os, shutil, subprocess, glob, time, datetime, argparse, itertools
 from copy import deepcopy
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 from Database import *
 from Densities import *
 from MultiIndex import *
 from Surrogates import *
+from Forward import *
 
-import randutil
+import randutil, basis
 
 QUIT = False
 
-def create_data(a, verbose=False) :
+def create_surrogates(a, verbose=1, save=True) :
     t, lim = a
     n = 3
     base = 1
     threshold = 1
-    oldcardinality = 0
+    oldcardinality = 2
     while n < 1000 :
-        print(n, base, threshold)
         if QUIT : break
-        m = SparseSet.withSize(weights=t.forwd.weights, n=n, t=threshold, verbose=False)
+        m = SparseSet.withSize(weights=t.forwd.dimWeights(), n=n, t=threshold, verbose=0, save=save)
+        e = None
         if m.cardinality > oldcardinality :
             oldcardinality = m.cardinality
-            s = Legendre(multis=m, target=t, method='wls', verbose=verbose)
-            e = SurrogateEvalDBO.get_or_create_from_args(t, s, 'mc', save=True, verbose=verbose)
-            print('dim: ', t.dim, ' - noise: ', t.forwd.dbo.noise, ' - alpha: ', t.forwd.alpha,
-                  ' - size: ', m.cardinality, ' - l2dist: ', e.l2dist)
-        if e.l2dist < lim :
+            for mode in ['cheby'] :
+                s = Legendre(multis=m, target=t, verbose=verbose, pmode=mode, save=save)
+                e = s.computeError(accurc=.0001, verbose=verbose)
+                print('dim: ', t.dim, ' - noise: ', t.noise, ' - alpha: ', t.forwd.alpha, ' - size: ', m.cardinality, ' - hedist: ', e.hedist)
+        if e is not None and e.hedist < lim :
             break
         else :
             n += base
@@ -37,49 +38,40 @@ def create_data(a, verbose=False) :
             threshold = m.threshold
 
 
-def create_args() :
-    n = 3
-    ds = [5,10,20,40,80]
-    alphas = [3,5]
-    sigmas = [.5,1]
-    basiss = [basis.hats_cdec]
-    xeval = np.linspace(-1,1,7)
+def create_targets(save=True) :
+    n_targets = 5
+    l = [2**i for i in range(7)]
+    ds = [sum(l[:i]) for i in range(1,8)][::-1]
+    alphas = [2]
+    noises = [.1]
+    wkerns = [10]
+    xmeas = np.linspace(-.9,.9,10)
 
-    tars = []
-    for (d, noise, alpha, base) in itertools.product(ds, sigmas, alphas, basiss) :
-        print(d, noise, alpha, base)
-        i = 0
-        forwd = fw.Convolution(basis=base, dim=d, alpha=alpha, noise=noise)
-        for row in DB.execute_sql('select truep, mean from gaussianposteriordbo pos join gaussiandbo gauss on pos.gauss_id = gauss.id join forwarddbo as fwd on pos.forwd_id = fwd.id'
-                                  + ' where forwd_id = {} and xeval = \'{}\' and basis = \'{}\''.format(forwd.dbo.id, to_string(xeval), base.__name__)).fetchall() :
-            print(d, noise, alpha, 'old')
-            t = GaussianPosterior(forwd=forwd, truep=fr_string(row[0]), xeval=xeval, xmsrmt=fr_string(row[1]), noise=noise)
-            tars.append(t)
-            i += 1
-            if i >= n : break
-        for j in range(i, n) :
-            print(d, noise, alpha, 'new')
-            truep = randutil.points(d)
-            xmsrmt = forwd.eval(truep, xeval=xeval) + noise*np.random.randn(len(xeval),1)
-            t = GaussianPosterior(forwd=forwd, truep=truep, xeval=xeval, xmsrmt=xmsrmt, noise=noise)
-            tars.append(t)
-    return tars
-
+    targets = []
+    for (d, noise, alpha, wkern) in itertools.product(ds, noises, alphas, wkerns) :
+        print(d, noise, alpha, wkern)
+        forwd = Convolution(basis=basis.hats, dim=d, alpha=alpha, wkern=wkern, xmeas=xmeas, save=save)
+        posts = GaussianPosterior.fromConfig(fwd=forwd, noise=noise)
+        n_preex_targets = min(len(posts), n_targets)
+        targets += posts[:n_preex_targets]
+        targets += [GaussianPosterior(forwd=copy.deepcopy(forwd), truep=randutil.points(d), noise=noise, save=save) for _ in range(n_preex_targets, n_targets)]
+    return targets
 
 if __name__ == "__main__" :
 
     start = datetime.datetime.now()
 
     try :
-        with ProcessPoolExecutor(max_workers=6) as executor :
+        with ThreadPoolExecutor(max_workers=2) as executor :
 
-            for lim in [1e-16] :
+            for lim in [1e-8] :
 
-                for t in create_args() :
+                for t in create_targets() :
 
                     if QUIT : break
-                    executor.submit(create_data, (t, lim))
-                    #create_data((t,lim))
+                    #executor.submit(create_surrogates, (t, lim))
+                    create_surrogates((t,lim))
+                    #pass
 
 
     except KeyboardInterrupt : QUIT = True
