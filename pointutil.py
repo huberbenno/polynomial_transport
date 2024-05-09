@@ -7,6 +7,87 @@ import itertools
 
 import randutil, legendreutil
 
+def scale(x, d1, d2) :
+    """
+    Affine transformation from the interval d1 to the interval d2 applied to point x.
+    x : scalar or array or list of shape (n, d) or (d,)
+    d1, d2 : arrays or lists of shape (d, 2) or (2,)
+    """
+    #if d1 is None : d1 = [-1,1]
+    #if d2 is None : d2 = self.domain
+
+    # ensure d1, d2 have shape (d, 2)
+    d1, d2 = np.array(d1), np.array(d2)
+    assert(d1.shape == d2.shape)
+    d = 1 if len(d1.shape) == 1 else d1.shape[0]
+    if len(d1.shape) == 1 :
+        d1 = d1.reshape((1,2))
+        d2 = d2.reshape((1,2))
+    for i in range(d) :
+        assert(d1[i,0] < d1[i,1])
+        assert(d2[i,0] < d2[i,1])
+
+    # ensure x has shape (n, d)
+    x = np.array(x)
+    x_shape = x.shape
+    if x_shape == () :
+        x = np.array([[x]])
+    else :
+        x = np.array(x)
+        if len(x.shape) == 1 :
+            if x.shape[0] == d :
+                x = x.reshape((1,len(x)))
+            else :
+                x = x.reshape((len(x),1))
+
+    # ensure x in d1
+    for i in range(d) :
+        for j in range(x.shape[0]) :
+            assert (x[j,i] >= d1[i,0] or np.isclose(x[j,i], d1[i,0])),\
+                    f'Assertion failed with\n x[{j},{i}] ({x[j,i]})\n d1[{i},0] ({d1[i,0]})'
+            assert (x[j,i] <= d1[i,1] or np.isclose(x[j,i], d1[i,1])),\
+                    f'Assertion failed with\n x[{j},{i}] ({x[j,i]})\n d1[i,1] ({d1[i,1]})'
+
+    # check
+    assert(len(x.shape) == len(d1.shape) == len(d2.shape) == 2)
+    assert(x.shape[1] == d1.shape[0] == d2.shape[0])
+    assert(d1.shape[1] == d2.shape[1] == 2)
+
+    # scale
+    for i in range(d) :
+        x[:,i] = (x[:,i] - d1[i,0]) / (d1[i,1] - d1[i,0])
+        x[:,i] = x[:,i] * (d2[i,1] - d2[i,0]) + d2[i,0]
+
+    # ensure x in d2
+    #for i in range(d) :
+    #    assert (x[:,i] >= d2[i,0]).all(), f"Assertion failed with\n x[:,i] ({x[:,i]})\n d2[i,0] ({d2[i,0]})"
+    #    assert (x[:,i] <= d2[i,1]).all(), f"Assertion failed with\n x[:,i] ({x[:,i]})\n d2[i,1] ({d2[i,1]})"
+
+    # return in original shape
+    return x.reshape(x_shape)
+
+def ensure_shape(x, d) :
+    """ ensures that x is of shape (d, n) """
+    if isinstance(x, float) :
+        assert d == 1
+        return np.array([[x]])
+    if isinstance(x, list) :
+        x = np.array(x)
+    assert x.ndim <= 2
+    if x.ndim == 0 :
+        assert d == 1
+        return np.array([[x]])
+
+    if x.ndim == 1 :
+        if d == 1 :
+            return np.expand_dims(x, axis=0)
+        else :
+            assert x.shape[0] == d
+            return np.expand_dims(x, axis=1)
+    if x.ndim == 2 and x.shape[0] != d :
+        return x.T
+    return x
+
 def bisection(f,y) :
     midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
     interval = [-1,1]
@@ -153,6 +234,16 @@ def get_sample_points_and_weights(multis, mode, det_mode=None, n='wls') :
 if __name__ == '__main__' :
     import MultiIndex as mi
     import require
+
+    test_data = [(np.random.rand(3), 3, (3,1)),
+                 (np.random.rand(3), 1, (1,3)),
+                 (np.random.rand(1,3), 3, (3,1)),
+                 (np.random.rand(1,3), 1, (1,3)),
+                 (np.random.rand(7,6), 6, (6,7)),
+                 (np.random.rand(7,6), 7, (7,6))]
+
+    for x, d, shape in test_data :
+        assert(ensure_shape(x, d).shape == shape)
 
     m = mi.TotalDegreeSet(dim=1, order=9)
 

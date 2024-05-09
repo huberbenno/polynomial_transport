@@ -10,11 +10,13 @@ import legendreutil, randutil, pointutil, require
 
 class Legendre :
 
-    def __init__(self, *, multis, target, pmode='cheby', pmode_det=None, n='wls', verbose=0, save=False) :
+    def __init__(self, *, multis, target, pmode='cheby', pmode_det=None, n='wls', verbose=0, save=False, domain=None) :
         require.equal(multis.dim, target.dim, 'multis.dim', 'target.dim')
         self.multis = multis
         self.target = target
         self.coeffs = None
+        self.dim = multis.dim
+        self.domain = domain
 
         if save :
             self.dbo, isnew = db.SurrogateDBO.get_or_create(
@@ -27,11 +29,10 @@ class Legendre :
             start = time.process_time()
 
             points, weights = pointutil.get_sample_points_and_weights(multis, pmode, pmode_det, n)
-            if verbose > 1 : print('\t\t', points.shape, weights.shape)
-            rhs = np.squeeze(target.evalSqrt(points))
-            if verbose > 1 : print('\t\t', rhs.shape)
             lhs = legendreutil.evaluate_basis(points, multis, mode='old')
-            if verbose > 1 : print('\t\t constructed rhs and lhs')
+            if domain is not None :
+                points = pointutil.scale(points.T, [[-1,1]]*self.dim, domain.r).T
+            rhs = np.squeeze(target.evalSqrt(points))
 
             if weights is not None:
                 for i in range(lhs.shape[0]) :
@@ -65,9 +66,10 @@ class Legendre :
         return Legendre(multis=multis, target=de.GaussianPosterior.fromId(dbo.target_id), method=dbo.method)
 
     def evalSqrt(self, x) :
-        #if isinstance(x, list) : x = np.array(x)
-        #elif not hasattr(x, '__len__') : x = np.array([[x]])
-        #if x.ndim == 1 : x = np.expand_dims(x, axis=0)
+        x = pointutil.ensure_shape(x, self.dim)
+        if self.domain is not None :
+            # assert x in self.domain
+            x = pointutil.scale(x.T, self.domain.r, [[-1,1]]*self.dim).T
         basis = legendreutil.evaluate_basis(x, self.multis)
         return np.dot(basis, self.coeffs)
 
