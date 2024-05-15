@@ -1,25 +1,25 @@
 import time, math
-
 import numpy as np
-
 from scipy.special import legendre
 from numpy.polynomial.legendre import legvander
-from numpy.polynomial import polyutils
 
 import require
 
+
 def get_polys(m) :
     return [legendre(i)*np.sqrt((2*i + 1)/2) for i in range(m)]
+
 
 def test_polys(m) :
     """ test orthonormality """
     polys = get_polys(m)
     for i in range(len(polys)) :
         antid = (polys[i] * polys[i]).integ()
-        require.close(antid(1)-antid(-1), 1, atol=1e-3) # supposed to be 1
+        require.close(antid(1)-antid(-1), 1, atol=1e-3)  # supposed to be 1
         for j in range(i+1, len(polys)) :
             antid = (polys[i] * polys[j]).integ()
-            require.close(antid(1)-antid(-1), 0, atol=1e-3) # supposed to be 0
+            require.close(antid(1)-antid(-1), 0, atol=1e-3)  # supposed to be 0
+
 
 def get_integrated_products(m, x) :
 
@@ -39,16 +39,21 @@ def get_integrated_products(m, x) :
 
     # fill upper and lower triangle
     for i in range(m+1) :
-        res[i,i+1:] = (1-x**2) * (p_x[i]*d_x[i+1:m+1] - p_x[i+1:m+1]*d_x[i]) / (i+range_list[i+1:]+1) / (i-range_list[i+1:])
+        res[i,i+1:] = ((1-x**2)
+                       * (p_x[i]*d_x[i+1:m+1] - p_x[i+1:m+1]*d_x[i])
+                       / (i+range_list[i+1:]+1) / (i-range_list[i+1:]))
         res[i+1:,i] = res[i,i+1:]
 
     # fill diagonal
     res[0,0] = (x + 1)/2
     res[1,1] = (x**3 + 1)/2
-    for i in range(2,m) :
-        res[i,i] = res[i-1,i-1] + res[i+1, i-1] * (i+1) * np.sqrt(2*i - 1) / i / np.sqrt(2*i + 3) - res[i, i-2] * (i-1) * np.sqrt(2*i + 1) / i / np.sqrt(2*i - 3)
+    for i in range(2, m) :
+        res[i,i] = (res[i-1,i-1]
+                    + res[i+1,i-1] * (i+1) * np.sqrt(2*i - 1) / i / np.sqrt(2*i + 3)
+                    - res[i,  i-2] * (i-1) * np.sqrt(2*i + 1) / i / np.sqrt(2*i - 3))
 
     return p_x[:-1], res[:-1, :-1]
+
 
 def evaluate_basis(x, multis, mode='') :
     """
@@ -61,17 +66,18 @@ def evaluate_basis(x, multis, mode='') :
         assert(m == len(indices))
         d, n = x.shape
 
-        van = legvander(x, multis.maxDegree) # shape = (d, n, max(indices)+1)
+        van = legvander(x, multis.maxDegree)  # shape = (d, n, max(indices)+1)
 
-        map1 = lambda l : np.sqrt((2*l + 1)/2) # legvander is normalized to P(1)=1, we need normalization wrt L2
+        map1 = lambda l : np.sqrt((2*l + 1)/2)  # legvander is normalized to P(1)=1, we need normalization wrt L2
         map2 = lambda q : van[q[0],:,q[1]]
 
         return np.array([math.prod(map(map1, idx))*math.prod(map(map2, enumerate(idx))) for idx in indices]).T
 
-    I = np.array(multis.asLists()) # shape = (d, n)
-    V = legvander(x, multis.maxDegree) # shape = (d, n, multis.maxDegree+1)
-    R = np.prod([V[i,:,I[:,i]] for i in range(multis.dim)], axis=0).T # shape = (n,m)
-    return np.multiply(R,multis.getWeightsForLegendreL2Normalization())
+    I = np.array(multis.asLists())  # shape = (d, n)
+    V = legvander(x, multis.maxDegree)  # shape = (d, n, multis.maxDegree+1)
+    R = np.prod([V[i,:,I[:,i]] for i in range(multis.dim)], axis=0).T  # shape = (n,m)
+    return np.multiply(R, multis.getWeightsForLegendreL2Normalization())
+
 
 def test_integrated_products(m, x) :
     res = get_integrated_products(m, x)[1]
@@ -83,12 +89,13 @@ def test_integrated_products(m, x) :
             require.close(val, res[i,j], atol=1e-3)
             require.close(val, res[j,i], atol=1e-3)
 
+
 if __name__ == '__main__' :
     from MultiIndex import *
     import randutil
 
     multis = SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
-    x = randutil.points(multis.dim,1)
+    x = randutil.points(multis.dim, 1)
     r_old = evaluate_basis(x, multis, 'old')
     r_new = evaluate_basis(x, multis)
     print(r_old)

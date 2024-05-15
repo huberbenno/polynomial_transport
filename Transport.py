@@ -4,6 +4,7 @@ import randutil, legendreutil, require
 
 import MultiIndex as mi
 
+
 class TransportMap :
 
     def __init__(self, surrogate) :
@@ -149,7 +150,7 @@ class TransportMap :
         return p_uni, p_tar
 
     def grid(self, xs=[-1, -.9, -.8, -.4, 0, .4, .8, .9, 1], ns=[100, 50, 20,20, 20, 20, 50, 100]) :
-        assert(self.d == 2)
+        assert self.d == 2
         lines = []
         k = np.sum(ns) + 1
         l = np.concatenate([np.linspace(xs[i], xs[i+1], ns[i], endpoint=False) for i in range(len(ns))] + [[1]])
@@ -167,6 +168,7 @@ class TransportMap :
             lines_t.append(np.array([np.array(self.inveval(x)) for x in l.T]).T)
         return lines, lines_t
 
+
 if __name__ == '__main__' :
     import Densities as de
     import Surrogates as su
@@ -176,7 +178,7 @@ if __name__ == '__main__' :
 
     logutil.print_indent('d = 1')
 
-    t = de.Gaussian(mean=randutil.points(1,1), cova=randutil.covarm(1))
+    t = de.Gaussian(mean=randutil.points(1, 1), cova=randutil.covarm(1))
     m = mi.TensorProductSet(dim=1, order=5)
     s = su.Legendre(multis=m, target=t)
 

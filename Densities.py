@@ -6,6 +6,8 @@ import require, basis, randutil
 import Database as db
 import Forward as fw
 
+#TODO allow to provide a function handle
+
 
 class TargetDensity :
 
@@ -16,12 +18,12 @@ class TargetDensity :
         self.norm_lebesgue = None
 
     def eval(self, x) :
-        assert(isinstance(x, np.ndarray))
-        assert(len(x.shape) <= 2)
+        assert isinstance(x, np.ndarray)
+        assert len(x.shape) <= 2
         require.equal(x.shape[0], self.dim, 'x.shape[0]', 'self.dim')
         n = 1 if len(x.shape) == 1 else x.shape[1]
         y = self.__eval__(x)
-        assert(isinstance(y, np.ndarray))
+        assert isinstance(y, np.ndarray)
         return y
 
     def evalSqrt(self, x) :
@@ -53,7 +55,7 @@ class TargetDensity :
                 s2 += fx**2
             if np.sqrt(s2 - s**2 / N) / s < accurc : break
         self.norm = s/N
-        self.norm_lebesgue = 2**(self.dim) * self.norm
+        self.norm_lebesgue = 2 ** self.dim * self.norm
 
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
@@ -102,7 +104,7 @@ class Gaussian(TargetDensity) :
 class DyingGaussian(TargetDensity) :
 
     def __init__(self, *, mean, exponent=2, save=False) :
-        assert(exponent >= 1)
+        assert exponent >= 1
         self.mean = np.array(mean)
         if len(self.mean.shape) == 1 : self.mean = np.expand_dims(self.mean, axis=1)
         TargetDensity.__init__(self, self.mean.shape[0], 'dyinggaussian')
@@ -121,7 +123,7 @@ class GaussianMixture(TargetDensity) :
 
     def __init__(self, *, dim, arglist, save=False) :
         TargetDensity.__init__(self, dim, 'gaussianmm')
-        assert(len(arglist) > 1 and len(arglist) < 5)
+        assert 1 < len(arglist) < 5
         self.n = len(arglist)
         self.gaussians = [Gaussian(mean=arg['mean'], cova=arg['cova'], save=save) for arg in arglist]
         if save :
@@ -162,7 +164,7 @@ class GaussianPosterior(TargetDensity) :
         return self.gauss.eval(self.forwd.eval(x))
 
     @classmethod
-    def fromConfig(self, *, fwd, noise) :
+    def fromConfig(cls, *, fwd, noise) :
         dbos = db.GaussianPosteriorDBO.select().where(db.GaussianPosteriorDBO.forwd_id == fwd.dbo.id,
                                                       db.GaussianPosteriorDBO.noise == noise,
                                                       db.GaussianPosteriorDBO.xmeas == db.to_string(fwd.xmeas))
@@ -221,7 +223,7 @@ class Circle(TargetDensity) :
 
 class Hat(TargetDensity) :
     def __init__(self, *, c=[-.5,.3], m=1, x=[-.7,-.3], y=[.2,.6], theta=0, scale=1) :
-        assert(x[0] <= c[0] and c[0] <= x[1] and y[0] <= c[1] and c[1] <= y[1])
+        assert x[0] <= c[0] <= x[1] and y[0] <= c[1] <= y[1]
         TargetDensity.__init__(self, 2, 'Hats')
         self.arcsins1 = np.array([m/(c[0]-x[0]), m/(c[1]-y[0]), m/(x[1]-c[0]), m/(y[1]-c[1])])
         self.c = np.array(c)
@@ -235,13 +237,16 @@ class Hat(TargetDensity) :
         res = np.zeros((x.shape[1]))
         ind = (x[0,:] >= self.x[0]) & (x[0,:] <= self.x[1]) & (x[1,:] >= self.y[0]) & (x[1,:] <= self.y[1])
         if ind.any() :
-            res[ind] = np.vstack((self.arcsins1[0]*np.abs(self.x[0]-x[0,ind]), self.arcsins1[1]*np.abs(self.y[0]-x[1,ind]), self.arcsins1[2]*np.abs(self.x[1]-x[0,ind]), self.arcsins1[3]*np.abs(self.y[1]-x[1,ind]))).min(axis=0)
+            res[ind] = np.vstack((self.arcsins1[0] * np.abs(self.x[0] - x[0, ind]),
+                                  self.arcsins1[1] * np.abs(self.y[0] - x[1, ind]),
+                                  self.arcsins1[2] * np.abs(self.x[1] - x[0, ind]),
+                                  self.arcsins1[3] * np.abs(self.y[1] - x[1, ind]))).min(axis=0)
         return res
 
 
 class MultimodalDensity(TargetDensity) :
     def __init__(self, *, densities, weights) :
-        assert(len(densities) == len(weights))
+        assert len(densities) == len(weights)
         TargetDensity.__init__(self, 2, 'MultimodalDensity')
         self.densities = densities
         self.weights = weights
@@ -293,6 +298,7 @@ def generate_densities(save) :
     densities += [Hat()]
     return densities
 
+
 if __name__ == '__main__' :
     import logutil, require
 
@@ -302,7 +308,7 @@ if __name__ == '__main__' :
 
         for t in generate_densities(save) :
             require.equal(t.eval(randutil.points(t.dim, 1)).shape, (1,), 'shape return value of eval single point', 'expected')
-            require.equal(t.eval(randutil.points(t.dim,10)).shape, (10,), 'shape return value of eval multiple points', 'expected')
+            require.equal(t.eval(randutil.points(t.dim, 10)).shape, (10,), 'shape return value of eval multiple points', 'expected')
             t.deleteDbo()
 
     logutil.print_done()

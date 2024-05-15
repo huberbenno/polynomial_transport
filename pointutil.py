@@ -2,10 +2,9 @@ import numpy as np
 import scipy.special as ss
 import itertools
 
-#from julia import Main
-#Main.include("../BSSsubsampling.jl/src/BSSsubsampling.jl")
-
+import MultiIndex as mi
 import randutil, legendreutil
+
 
 def scale(x, d1, d2) :
     """
@@ -18,14 +17,14 @@ def scale(x, d1, d2) :
 
     # ensure d1, d2 have shape (d, 2)
     d1, d2 = np.array(d1), np.array(d2)
-    assert(d1.shape == d2.shape)
+    assert d1.shape == d2.shape
     d = 1 if len(d1.shape) == 1 else d1.shape[0]
     if len(d1.shape) == 1 :
         d1 = d1.reshape((1,2))
         d2 = d2.reshape((1,2))
     for i in range(d) :
-        assert(d1[i,0] < d1[i,1])
-        assert(d2[i,0] < d2[i,1])
+        assert d1[i,0] < d1[i,1]
+        assert d2[i,0] < d2[i,1]
 
     # ensure x has shape (n, d)
     x = np.array(x)
@@ -49,9 +48,9 @@ def scale(x, d1, d2) :
                     f'Assertion failed with\n x[{j},{i}] ({x[j,i]})\n d1[i,1] ({d1[i,1]})'
 
     # check
-    assert(len(x.shape) == len(d1.shape) == len(d2.shape) == 2)
-    assert(x.shape[1] == d1.shape[0] == d2.shape[0])
-    assert(d1.shape[1] == d2.shape[1] == 2)
+    assert len(x.shape) == len(d1.shape) == len(d2.shape) == 2
+    assert x.shape[1] == d1.shape[0] == d2.shape[0]
+    assert d1.shape[1] == d2.shape[1] == 2
 
     # scale
     for i in range(d) :
@@ -65,6 +64,7 @@ def scale(x, d1, d2) :
 
     # return in original shape
     return x.reshape(x_shape)
+
 
 def ensure_shape(x, d) :
     """ ensures that x is of shape (d, n) """
@@ -88,9 +88,10 @@ def ensure_shape(x, d) :
         return x.T
     return x
 
+
 def bisection(f,y) :
     midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
-    interval = [-1,1]
+    interval = [-1, 1]
     x = 0
     candidate = f(x)
     for _ in range(30) :
@@ -100,8 +101,10 @@ def bisection(f,y) :
         candidate = f(x)
     return x
 
+
 def chebychev_1d(n) : # https://en.wikipedia.org/wiki/Chebyshev_nodes
     return np.array([np.cos((2*k+1)*np.pi/2/n) for k in range(n)])
+
 
 def leja_1d(n) :
     r = [1]
@@ -114,6 +117,7 @@ def leja_1d(n) :
             r.append(np.sqrt((r[int((j+1)/2)] + 1) / 2))
     return np.array(r).reshape((len(r),1))
 
+
 def leja(multiset) :
     r = leja_1d(multiset.maxDegree)
     p = np.zeros((multiset.dim, multiset.cardinality))
@@ -121,6 +125,7 @@ def leja(multiset) :
         for j in range(multiset.cardinality) :
             p[i,j] = r[multiset[j][i]]
     return p
+
 
 def leggaus(multiset) :
     p1d, w1d = np.polynomial.legendre.leggauss(multiset.maxDegree + 1)
@@ -135,14 +140,14 @@ def leggaus(multiset) :
     #print(np.sum(w))
     return p, None #np.sum(w, axis=0)/np.sum(w)
 
+
 def cheby_weights(samples) :
     return (np.pi/2)**samples.shape[0] * np.prod(np.sqrt(1-samples**2), axis=0)
 
+
 def get_sample_points_and_weights_legacy(method, multis) :
-    d = multis.dim
     m = multis.size()
-    assert(m > 0)
-    samples = None
+    assert m > 0
     weights = None
     if method == 'ip_leja' :
         samples = leja(multis)
@@ -166,8 +171,9 @@ def get_sample_points_and_weights_legacy(method, multis) :
                 k += 1
         m = mi.TotalDegreeSet(dim=multis.dim, order=k, save=False)
         samples, weights = leggaus(m)
-    else : assert(False)
+    else : assert False
     return samples, weights
+
 
 def get_sample_points_and_weights_random(multis, mode, n) :
     if mode == 'uni' :
@@ -176,14 +182,12 @@ def get_sample_points_and_weights_random(multis, mode, n) :
         samples = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, n)))
         return samples, cheby_weights(samples)
     if mode == 'cheby_ss' :
+        import julia
+        julia.Main.include("../BSSsubsampling.jl/src/BSSsubsampling.jl")
         samples = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, 2*n)))
         Y = legendreutil.evaluate_basis(samples, multis)
-        idxs, s = Main.BSSsubsampling.bss(Y, n/multis.size(), A = 1, B = 1)
-        #print(n, Y.shape, idxs.shape, multis.size())
-        samples = samples[:, idxs-1]
-        ws = cheby_weights(samples)
-        #for w1,w2 in zip(s,ws) : print(w1, '\t', w2, '\t', w1/w2)
-        return samples, cheby_weights(samples)
+        idxs, s = julia.Main.BSSsubsampling.bss(Y, n/multis.size(), A=1, B=1)
+        return samples[:, idxs-1], cheby_weights(samples)
     if mode == 'christoffel' :
         polys = [ss.legendre(i)*np.sqrt((2*i + 1)) for i in range(multis.maxDegree+1)]
         polys = [(p*p).integ() for p in polys]
@@ -198,11 +202,11 @@ def get_sample_points_and_weights_random(multis, mode, n) :
             weights[j] = m/np.sum([np.prod([polys[k](samples[l,j])**2 for l,k in enumerate(multis[q].asList())]) for q in range(multis.size())])
         return samples, weights
 
+
 def get_sample_points_and_weights_deterministic(multis, mode, det_mode, n='wls') :
     points = {'cheby_det' : chebychev_1d, 'leja' : leja_1d, 'leggaus' : leggaus}[mode]
 
     #TODO think through weights for leja or leggaus below!
-    samples = None
     if mode == 'shuffled':
         res = []
         for i in range(multis.dim) :
@@ -215,24 +219,24 @@ def get_sample_points_and_weights_deterministic(multis, mode, det_mode, n='wls')
         samples = np.array(randutil.rng.choice(res, size=n, replace=False)).T
     elif mode == 'sparse_grid' :
         samples = n.getSparseGrid(lambda kmax : np.array(points(kmax)))
-    else : assert(False)
+    else : assert False
 
     #require.equal(samples.shape, 'samples.shape', (multis.dim, n), '(multis.dim, n)')
     return samples, cheby_weights(samples)
 
+
 def get_sample_points_and_weights(multis, mode, det_mode=None, n='wls') :
-    assert(mode in ['uni', 'cheby', 'cheby_ss', 'christoffel', 'cheby_det', 'leja', 'leggaus'])
+    assert mode in ['uni', 'cheby', 'cheby_ss', 'christoffel', 'cheby_det', 'leja', 'leggaus']
     if n == 'ip'  : n = multis.size()
     if n == 'wls' : n = 10 * multis.size() * int(np.log(multis.size()))
     if n == 'ls'  : n = multis.size()**2
 
     if mode in ['uni', 'cheby', 'cheby_ss', 'christoffel'] :
         return get_sample_points_and_weights_random(multis, mode, n)
-    assert(False)
+    assert False
 
 
 if __name__ == '__main__' :
-    import MultiIndex as mi
     import require
 
     test_data = [(np.random.rand(3), 3, (3,1)),
@@ -243,7 +247,7 @@ if __name__ == '__main__' :
                  (np.random.rand(7,6), 7, (7,6))]
 
     for x, d, shape in test_data :
-        assert(ensure_shape(x, d).shape == shape)
+        assert ensure_shape(x, d).shape == shape
 
     m = mi.TotalDegreeSet(dim=1, order=9)
 

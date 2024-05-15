@@ -1,12 +1,12 @@
 import numpy as np
-import scipy.special as ss
-import time, itertools
+import time
 
 import MultiIndex as mi
 import Database as db
 import Densities as de
 
 import legendreutil, randutil, pointutil, require
+
 
 class Legendre :
 
@@ -59,7 +59,7 @@ class Legendre :
         self.m = len(self.coeffs)
 
     @classmethod
-    def fromDbo(self, dbo) :
+    def fromDbo(cls, dbo) :
         multis = None
         if dbo.multis == 'sparse' :
             multis = mi.SparseSet.fromId(dbo.multis_id)
@@ -88,6 +88,7 @@ class Legendre :
 
     #TODO move legendreutil.evaluate_basis here
 
+
 class SurrogateEvaluation :
 
     def __init__(self, *, surrog, n=100, max_n=1e5, accurc=.01, verbose=False, save=False) :
@@ -112,7 +113,7 @@ class SurrogateEvaluation :
             mean_tar = 0
             mean_sur = 0
             variance = np.inf
-            while variance > accurc and len(approx_samples) < max_n : #2**32 :
+            while variance > accurc and len(approx_samples) < max_n :  # 2**32 :
                 if verbose > 1 : print(variance, len(approx_samples))
                 points = randutil.points(d, n)
                 evals_tar = surrog.target.evalSqrt(points)
@@ -151,20 +152,19 @@ class SurrogateEvaluation :
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
 
-#def generate_surrogates(save) :
 
 if __name__ == '__main__' :
     import Densities as de
-    import logutil, randutil
+    import logutil
 
     logutil.print_start('Testing Surrogate Module...', end='\n')
 
     for save in [True, False] :
 
-        for t in [de.Gaussian(mean=randutil.points(3,1), cova=randutil.covarm(3), save=save)] :#de.generate_densities(save) :
+        for t in [de.Gaussian(mean=randutil.points(3,1), cova=randutil.covarm(3), save=save)] :  #de.generate_densities(save) :
             m = mi.TotalDegreeSet(dim=t.dim, order=int(np.ceil(50**(1/t.dim))), save=save)
 
-            for mode in ['cheby'] : #['ls', 'wls', 'ip_leja', 'ip_leggaus', 'wls_leja', 'wls_leggaus'] :
+            for mode in ['cheby'] :   #['ls', 'wls', 'ip_leja', 'ip_leggaus', 'wls_leja', 'wls_leggaus'] :
                 s = Legendre(multis=m, target=t, pmode=mode, save=save)
                 s.eval(randutil.points(t.dim))
                 e = s.computeError()

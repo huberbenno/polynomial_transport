@@ -5,6 +5,7 @@ import time, copy, math
 import Database as db
 import require
 
+
 class MultiIndex :
 
     def __init__(self, idxs=[]) :
@@ -20,11 +21,12 @@ class MultiIndex :
     def print(self) :
         print(self.idxs)
 
+
 class MultiIndexSparse :
 
     def __init__(self, ilist=[]) :
         self.d = len(ilist)
-        self.nzs = it.filterfalse(lambda x : x[1]==0, enumerate(ilist)) #TODO binary search tree
+        self.nzs = it.filterfalse(lambda x : x[1]==0, enumerate(ilist))  # TODO binary search tree
 
     def __getitem__(self, i) :
         if i == -1 :
@@ -39,6 +41,7 @@ class MultiIndexSparse :
 
     def print(self) :
         print(self.asList())
+
 
 # ---------- Indexsets --------------------
 
@@ -63,7 +66,7 @@ class MultiIndexSet :
 
     def setup1d(self, k) :
         if self.verbose : print('setup 1D')
-        assert(len(self.idxs) == 0)
+        assert len(self.idxs) == 0
         for idx in range(k+1) :
             self.add(MultiIndex([idx]))
 
@@ -120,7 +123,7 @@ class TensorProductSet(MultiIndexSet) :
 
     def setup(self) :
         if self.verbose : print('setup TensorProductSet')
-        assert(len(self.idxs) == 0)
+        assert len(self.idxs) == 0
         for idx in it.product(range(self.order+1), repeat=self.dim) :
             self.add(MultiIndex(idx))
 
@@ -135,7 +138,7 @@ class TotalDegreeSet(MultiIndexSet) :
 
     def setup(self) :
         if self.verbose : print('setup TotalDegreeSet')
-        assert(len(self.idxs) == 0)
+        assert len(self.idxs) == 0
         for idx in it.filterfalse(lambda x : sum(x) > self.order,
                                   it.product(range(self.order+1), repeat=self.dim)) :
             self.add(MultiIndex(idx))
@@ -144,10 +147,10 @@ class TotalDegreeSet(MultiIndexSet) :
 class SparseSet(MultiIndexSet) :
 
     def __init__(self, *, weights, threshold, save=True, verbose=False) :
-        assert(weights[0] < 1)
+        assert weights[0] < 1
         for i in range(len(weights)-1) :
-            assert(weights[i] >= weights[i+1])
-        self.weights = weights #TODO assert monotonicity?
+            assert weights[i] >= weights[i+1]
+        self.weights = weights  # TODO assert monotonicity?
         self.threshold = threshold
         if save :
             self.dbo, _ = db.MultiIndexSetAnisotropicDBO.get_or_create(
@@ -156,7 +159,7 @@ class SparseSet(MultiIndexSet) :
 
 
     @classmethod
-    def fromId(self, id) :
+    def fromId(cls, id) :
         dbo = db.MultiIndexSetAnisotropicDBO.get_by_id(id)
         thresh = None
         if isinstance(dbo.thresh, float) :
@@ -167,7 +170,7 @@ class SparseSet(MultiIndexSet) :
 
     def setup(self) :
         if self.verbose : print('setup SparseSet')
-        assert(len(self.idxs) == 0)
+        assert len(self.idxs) == 0
         base = np.zeros((len(self.weights),), dtype=np.int64)
         self.add(MultiIndex(base))
 
@@ -196,7 +199,6 @@ class SparseSet(MultiIndexSet) :
     def isFeasible(self, idx) :
         mapidx = lambda i : self.weights[i[0]]**i[1]
         res = math.prod(map(mapidx  , enumerate(idx)))
-        #print(idx, 'res ', res, 'thresh', self.threshold, res > self.threshold)
         return res > self.threshold
 
     def getNextIndex(self, idx, d) :
@@ -218,17 +220,18 @@ class SparseSet(MultiIndexSet) :
             if verbose > 1 : print('\t\t', n, m.cardinality, tlower, t, tupper)
             if m.cardinality < n :
                 tupper = t
-                t = t/2 if tlower == None else (tlower + t)/2
+                t = t/2 if tlower is None else (tlower + t)/2
                 #m.deleteDbo()
                 m = SparseSet(weights=weights, threshold=t, save=False, verbose=False)
             elif m.cardinality > n :
                 tlower = t
-                t = t*2 if tupper == None else (tupper + t)/2
+                t = t*2 if tupper is None else (tupper + t)/2
                 #m.deleteDbo()
                 m = SparseSet(weights=weights, threshold=t, save=False, verbose=False)
         #print(m.cardinality, n, t, m.threshold)
         if verbose > 0 : print('\t SETUP SparseSet DONE.', n, m.cardinality)
         return SparseSet(weights=weights, threshold=t, save=save, verbose=False)
+
 
 # ---------- Trees --------------------
 
@@ -248,6 +251,7 @@ class MultiIndexTreeNode :
 
     def print(self) :
         print(self.idx, self.val, len(self.children))
+
 
 class MultiIndexTree :
 
@@ -276,39 +280,40 @@ if __name__ == '__main__' :
         #print(m.getSparseGrid(lambda kmax : [np.cos((2*k+1)*np.pi/2/kmax) for k in range(kmax)]))
 
         m = SparseSet.withSize(weights=[.6], n=5, t=32, save=save)
-        assert(m.cardinality == 5)
+        assert m.cardinality == 5
         if save : m.deleteDbo()
 
         m = SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=save)
-        assert(m.cardinality == 27)
+        assert m.cardinality == 27
         m.deleteDbo()
 
         m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=save)
-        assert(m.cardinality == 31)
+        assert m.cardinality == 31
         m.deleteDbo()
 
         m = TensorProductSet(dim=1, order=5, save=save)
-        assert(m.cardinality == 6)
+        assert m.cardinality == 6
         if save : m.deleteDbo()
 
         m = TensorProductSet(dim=2, order=5, save=save)
-        assert(m.cardinality == 36)
+        assert m.cardinality == 36
         m.deleteDbo()
 
         m = TensorProductSet(dim=3, order=5, save=save)
-        assert(m.cardinality == 216)
+        assert m.cardinality == 216
         m.deleteDbo()
 
         m = TotalDegreeSet(dim=1, order=5, save=save)
-        assert(m.cardinality == 6)
+        assert m.cardinality == 6
         if save : m.deleteDbo()
 
         m = TotalDegreeSet(dim=2, order=5, save=save)
-        assert(m.cardinality == 21)
+        assert m.cardinality == 21
         m.deleteDbo()
 
         m = TotalDegreeSet(dim=3, order=5, save=save)
-        assert(m.cardinality == 56)
+        assert m.cardinality == 56
         m.deleteDbo()
 
         logutil.print_done()
+        
