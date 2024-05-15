@@ -47,7 +47,7 @@ class MultiIndexSparse :
 
 class MultiIndexSet :
 
-    def __init__(self, *, name, dim, save=True, verbose=False) :
+    def __init__(self, *, name, dim, save=False, verbose=False) :
         start = time.process_time()
         self.name = name
         self.idxs = []
@@ -115,7 +115,7 @@ class MultiIndexSet :
 
 class TensorProductSet(MultiIndexSet) :
 
-    def __init__(self, *, dim, order, save=True, verbose=False) :
+    def __init__(self, *, dim, order, save=False, verbose=False) :
         self.order = order
         if save :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(dim=dim, mode='tensorproduct', order=order)
@@ -130,7 +130,7 @@ class TensorProductSet(MultiIndexSet) :
 
 class TotalDegreeSet(MultiIndexSet) :
 
-    def __init__(self, *, dim, order, save=True, verbose=False) :
+    def __init__(self, *, dim, order, save=False, verbose=False) :
         self.order = order
         if save :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(dim=dim, mode='totaldegree', order=order)
@@ -146,7 +146,7 @@ class TotalDegreeSet(MultiIndexSet) :
 
 class SparseSet(MultiIndexSet) :
 
-    def __init__(self, *, weights, threshold, save=True, verbose=False) :
+    def __init__(self, *, weights, threshold, save=False, verbose=False) :
         assert weights[0] < 1
         for i in range(len(weights)-1) :
             assert weights[i] >= weights[i+1]
