@@ -2,7 +2,7 @@ import numpy as np
 from numpy.polynomial.legendre import legvander
 import copy
 
-import require, basis, randutil
+import util
 import Database as db
 import Forward as fw
 
@@ -20,7 +20,7 @@ class TargetDensity :
     def eval(self, x) :
         assert isinstance(x, np.ndarray)
         assert len(x.shape) <= 2
-        require.equal(x.shape[0], self.dim, 'x.shape[0]', 'self.dim')
+        util.require.equal(x.shape[0], self.dim, 'x.shape[0]', 'self.dim')
         n = 1 if len(x.shape) == 1 else x.shape[1]
         y = self.__eval__(x)
         assert isinstance(y, np.ndarray)
@@ -48,7 +48,7 @@ class TargetDensity :
         while N < max_N :
             n = max(min_N, int(0.2 * N))
             N += n
-            x = randutil.points(self.dim, n)
+            x = util.random.points(self.dim, n)
             for i in range(n) :
                 fx = self.eval(np.expand_dims(x[:,i],-1))
                 s  += fx
@@ -85,8 +85,8 @@ class Gaussian(TargetDensity) :
         self.cova = np.array(cova)
         if len(self.mean.shape) == 1 : self.mean = np.expand_dims(self.mean, axis=1)
         TargetDensity.__init__(self, mean.shape[0], 'gaussian')
-        require.equal(self.dim, cova.shape[0], 'self.dim', 'cova.shape[0]')
-        require.equal(self.dim, cova.shape[1], 'self.dim', 'cova.shape[1]')
+        util.require.equal(self.dim, cova.shape[0], 'self.dim', 'cova.shape[0]')
+        util.require.equal(self.dim, cova.shape[1], 'self.dim', 'cova.shape[1]')
 
         self.invc = np.linalg.inv(cova)
         self.norm = np.sqrt((2*np.pi)**self.dim * np.linalg.det(cova))
@@ -143,8 +143,8 @@ class GaussianMixture(TargetDensity) :
 class GaussianPosterior(TargetDensity) :
 
     def __init__(self, *, forwd, truep, noise, gauss=None, save=False) :
-        require.equal(forwd.dim, len(truep), 'forwd.dim', 'len(truep)')
-        require.notNone(forwd.xmeas, 'forwd.xmeas')
+        util.require.equal(forwd.dim, len(truep), 'forwd.dim', 'len(truep)')
+        util.require.notNone(forwd.xmeas, 'forwd.xmeas')
         TargetDensity.__init__(self, forwd.dim, 'posterior')
         self.forwd = forwd
         self.truep = truep
@@ -152,7 +152,7 @@ class GaussianPosterior(TargetDensity) :
         self.gauss = gauss
         if self.gauss is None :
             mean = forwd.eval(truep)
-            self.gauss = Gaussian(mean=mean + noise*randutil.rng.normal(size=mean.shape),
+            self.gauss = Gaussian(mean=mean + noise * util.random.rng.normal(size=mean.shape),
                                   cova=noise*np.eye(len(mean)), save=save)
         #self.norm = np.sqrt((2*np.pi)**forwd.dim * np.linalg.det(np.linalg.inv(np.dot(forwd.M.T,np.dot(self.gauss.invc, forwd.M)))))
 
@@ -285,30 +285,29 @@ class IntermediateDensity(TargetDensity) :
 def generate_densities(save) :
     densities = []
     for d in [1, 3, 5] :
-        arglist = [{'mean' : randutil.points(d,1), 'cova' : randutil.covarm(d)},
-                   {'mean' : randutil.points(d,1), 'cova' : randutil.covarm(d)}]
+        arglist = [{'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)},
+                   {'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)}]
         densities += [GaussianMixture(dim=d, arglist=arglist, save=save)]
-        #densities += [DyingGaussian(mean=randutil.points(d,1), save=save)]
-    for d in randutil.rng.integers(low=1, high=32, size=(3,)) :
-        f = fw.Convolution(basis=basis.hats, dim=d, alpha=1, xmeas=randutil.points(10), save=save)
-        densities += [GaussianPosterior(forwd=f, truep=randutil.points(d), noise=randutil.rng.uniform()/10)]
+        #densities += [DyingGaussian(mean=util.random.points(d,1), save=save)]
+    for d in util.random.rng.integers(low=1, high=32, size=(3,)) :
+        f = fw.Convolution(basis=util.basis.hats, dim=d, alpha=1, xmeas=util.random.points(10), save=save)
+        densities += [GaussianPosterior(forwd=f, truep=util.random.points(d), noise=util.random.rng.uniform() / 10)]
         #TODO  Kdiff
         #densities += [Rosenbrock(a=.2, b=8, theta=-2.2/10*np.pi, centr=np.array([.5,-.5]), scale=1.1)]
-    densities += [Circle(c=randutil.points(2), r=.4, w=.2)]
+    densities += [Circle(c=util.random.points(2), r=.4, w=.2)]
     densities += [Hat()]
     return densities
 
 
 if __name__ == '__main__' :
-    import logutil, require
 
-    logutil.print_start('Testing Density Module...', end='\n')
+    util.log.print_start('Testing Density Module...', end='\n')
 
     for save in [True, False] :
 
         for t in generate_densities(save) :
-            require.equal(t.eval(randutil.points(t.dim, 1)).shape, (1,), 'shape return value of eval single point', 'expected')
-            require.equal(t.eval(randutil.points(t.dim, 10)).shape, (10,), 'shape return value of eval multiple points', 'expected')
+            util.require.equal(t.eval(util.random.points(t.dim, 1)).shape, (1,), 'shape return value of eval single point', 'expected')
+            util.require.equal(t.eval(util.random.points(t.dim, 10)).shape, (10,), 'shape return value of eval multiple points', 'expected')
             t.deleteDbo()
 
-    logutil.print_done()
+    util.log.print_done()

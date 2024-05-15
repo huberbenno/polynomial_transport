@@ -3,7 +3,7 @@ import scipy.special as ss
 import itertools
 
 import MultiIndex as mi
-import randutil, legendreutil
+from . import random, legendre
 
 
 def scale(x, d1, d2) :
@@ -185,7 +185,7 @@ def get_sample_points_and_weights_random(multis, mode, n) :
         import julia
         julia.Main.include("../BSSsubsampling.jl/src/BSSsubsampling.jl")
         samples = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, 2*n)))
-        Y = legendreutil.evaluate_basis(samples, multis)
+        Y = legendre.evaluate_basis(samples, multis)
         idxs, s = julia.Main.BSSsubsampling.bss(Y, n/multis.size(), A=1, B=1)
         return samples[:, idxs-1], cheby_weights(samples)
     if mode == 'christoffel' :
@@ -211,12 +211,12 @@ def get_sample_points_and_weights_deterministic(multis, mode, det_mode, n='wls')
         res = []
         for i in range(multis.dim) :
             base = points(n)
-            randutil.rng.shuffle(base)
+            random.rng.shuffle(base)
             res.append(base)
         samples = np.array(res)
     elif mode == 'tp_light':
         res = list(itertools.product(points(int(np.ceil(n**(1/multis.dim)))), repeat=multis.dim))
-        samples = np.array(randutil.rng.choice(res, size=n, replace=False)).T
+        samples = np.array(random.rng.choice(res, size=n, replace=False)).T
     elif mode == 'sparse_grid' :
         samples = n.getSparseGrid(lambda kmax : np.array(points(kmax)))
     else : assert False

@@ -1,4 +1,4 @@
-import time, base64
+import base64
 import numpy as np
 import peewee as pw
 
@@ -113,10 +113,10 @@ class SurrogateEvalDBO(BaseModel):
 
 
 if __name__ == '__main__' :
-    import logutil
+    import util.log
 
-    logutil.print_start('Setting up database...')
+    util.log.print_start('Setting up database...')
     DB.connect()
     DB.create_tables([ConvolutionDBO, GaussianDBO, GaussianMmDBO, GaussianPosteriorDBO, RosenbrockDBO, MultiIndexSetDBO,
                       MultiIndexSetAnisotropicDBO, SurrogateDBO, SurrogateEvalDBO])
-    logutil.print_done_ctd()
+    util.log.print_done_ctd()

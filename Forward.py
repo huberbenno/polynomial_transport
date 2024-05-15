@@ -1,6 +1,6 @@
 import numpy as np
 
-import basis, require
+import util
 import Database as db
 
 
@@ -11,7 +11,7 @@ class Forward :
 
     def eval(self, p, **kwargs) :
         if isinstance(p, list) : p = np.array(p)
-        require.equal(p.shape[0], self.dim, 'p.shape[0]', 'self.dim')
+        util.require.equal(p.shape[0], self.dim, 'p.shape[0]', 'self.dim')
 
         res = self.__eval__(p, **kwargs)
 
@@ -93,29 +93,28 @@ class Convolution(Forward) :
     @classmethod
     def fromId(cls, id) :
         dbo = db.ConvolutionDBO.get_by_id(id)
-        return Convolution(basis=getattr(basis, dbo.basis), dim=dbo.dim, alpha=dbo.alpha,
+        return Convolution(basis=getattr(util.basis, dbo.basis), dim=dbo.dim, alpha=dbo.alpha,
                            nquad=dbo.nquad, save=True)
 
 
 if __name__ == '__main__' :
-    import randutil, logutil
-    logutil.print_start('Testing Forward Module...', end='\n')
+    util.log.print_start('Testing Forward Module...', end='\n')
 
-    dim = randutil.rng.integers(low=1, high=10)
-    logutil.print_indent(' Testing Convolution with dimension {}'.format(dim))
+    dim = util.random.rng.integers(low=1, high=10)
+    util.log.print_indent(' Testing Convolution with dimension {}'.format(dim))
 
     x = np.linspace(-1, 1, 20)
-    p = randutil.points(dim)
+    p = util.random.points(dim)
 
     for save in [True, False] :
-        f = Convolution(basis=basis.hats, dim=dim, alpha=1, xmeas=x, save=save)
+        f = Convolution(basis=util.basis.hats, dim=dim, alpha=1, xmeas=x, save=save)
 
         res1 = f.eval(p)
         res2 = f.eval(p, xmeas=x)
-        require.close(res1, res2)
+        util.require.close(res1, res2)
 
         if save :
             f2 = Convolution.fromId(f.dbo.id)
         f.deleteDbo()
 
-    logutil.print_done()
+    util.log.print_done()

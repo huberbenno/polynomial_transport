@@ -1,9 +1,9 @@
-import time, math
+import math
 import numpy as np
 from scipy.special import legendre
 from numpy.polynomial.legendre import legvander
 
-import require
+from . import require
 
 
 def get_polys(m) :
@@ -15,10 +15,10 @@ def test_polys(m) :
     polys = get_polys(m)
     for i in range(len(polys)) :
         antid = (polys[i] * polys[i]).integ()
-        require.close(antid(1)-antid(-1), 1, atol=1e-3)  # supposed to be 1
+        require.close(antid(1) - antid(-1), 1, atol=1e-3)  # supposed to be 1
         for j in range(i+1, len(polys)) :
             antid = (polys[i] * polys[j]).integ()
-            require.close(antid(1)-antid(-1), 0, atol=1e-3)  # supposed to be 0
+            require.close(antid(1) - antid(-1), 0, atol=1e-3)  # supposed to be 0
 
 
 def get_integrated_products(m, x) :
@@ -92,10 +92,10 @@ def test_integrated_products(m, x) :
 
 if __name__ == '__main__' :
     from MultiIndex import *
-    import randutil
+    from . import random
 
     multis = SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
-    x = randutil.points(multis.dim, 1)
+    x = random.points(multis.dim, 1)
     r_old = evaluate_basis(x, multis, 'old')
     r_new = evaluate_basis(x, multis)
     print(r_old)

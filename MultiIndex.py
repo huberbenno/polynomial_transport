@@ -2,8 +2,8 @@ import numpy as np
 import itertools as it
 import time, copy, math
 
+import util
 import Database as db
-import require
 
 
 class MultiIndex :
@@ -94,7 +94,7 @@ class MultiIndexSet :
 
     def getSparseGrid(self, points) :
         points = np.vstack([[x for x in it.product(*[points(l+1) for l in list(idx)])] for idx in self.getFrontier()])
-        require.equal(self.getSparseGridSize(), len(points), 'self.getSparseGridSize', 'len(points)')
+        util.require.equal(self.getSparseGridSize(), len(points), 'self.getSparseGridSize', 'len(points)')
         return points.T
 
     def getSparseGridSize(self) :
@@ -267,9 +267,8 @@ class MultiIndexTree :
 
 
 if __name__ == '__main__' :
-    import logutil
 
-    logutil.print_start('Testing Multiindex Module...', end='\n')
+    util.log.print_start('Testing Multiindex Module...', end='\n')
 
     for save in [True, False] :
         #m = SparseSet.withSize(weights=[.6, .4], n=13, t=60, save=save)
@@ -315,5 +314,5 @@ if __name__ == '__main__' :
         assert m.cardinality == 56
         m.deleteDbo()
 
-        logutil.print_done()
+        util.log.print_done()
         

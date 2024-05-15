@@ -1,8 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import plotutil
-
 
 def hats(x, p, alpha=1) :
     d = len(p)
@@ -89,16 +87,18 @@ def steps(x, p, alpha=1) :
 
 
 if __name__ == '__main__' :
+    import util
+
     fig = plt.figure()
     x = np.linspace(-1, 1, 501)
 
-    ax1 = plotutil.get_ax(fig=fig, nx=2, idx=1, title='hats')
+    ax1 = util.plot.get_ax(fig=fig, nx=2, idx=1, title='hats')
     ax1.plot(x, [hats_cdec(xi, [1]) for xi in x], label=r'$\ell=0$')
     for l in range(1,7) :
         ax1.plot(x, [hats_cdec(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label=r'$\ell={}$'.format(l))
     ax1.legend()
 
-    ax2 = plotutil.get_ax(fig=fig, nx=2, idx=2, title='steps')
+    ax2 = util.plot.get_ax(fig=fig, nx=2, idx=2, title='steps')
     ax2.plot(x, [steps(xi, [1]) for xi in x], label=r'$\ell=0$')
     for l in range(1,7) :
         ax2.plot(x, [steps(xi, [0] * (2**l - 1) + [1] * 2**l) for xi in x], label=r'$\ell={}$'.format(l))

@@ -1,17 +1,15 @@
 import numpy as np
 import time
 
+import util
 import MultiIndex as mi
 import Database as db
-import Densities as de
-
-import legendreutil, randutil, pointutil, require
 
 
 class Legendre :
 
     def __init__(self, *, multis, target, pmode='cheby', pmode_det=None, n='wls', verbose=0, save=False, domain=None) :
-        require.equal(multis.dim, target.dim, 'multis.dim', 'target.dim')
+        util.require.equal(multis.dim, target.dim, 'multis.dim', 'target.dim')
         self.multis = multis
         self.target = target
         self.coeffs = None
@@ -28,10 +26,10 @@ class Legendre :
             if verbose > 0 : print('\t SETUP Surrogate')
             start = time.process_time()
 
-            points, weights = pointutil.get_sample_points_and_weights(multis, pmode, pmode_det, n)
-            lhs = legendreutil.evaluate_basis(points, multis, mode='old')
+            points, weights = util.points.get_sample_points_and_weights(multis, pmode, pmode_det, n)
+            lhs = util.legendre.evaluate_basis(points, multis, mode='old')
             if domain is not None :
-                points = pointutil.scale(points.T, [[-1,1]]*self.dim, domain.r).T
+                points = util.points.scale(points.T, [[-1, 1]] * self.dim, domain.r).T
             rhs = np.squeeze(target.evalSqrt(points))
 
             if weights is not None:
@@ -53,7 +51,7 @@ class Legendre :
                 self.dbo.save()
             if verbose > 0 : print('\t SETUP Surrogate DONE')
 
-        require.equal(self.coeffs.shape, (multis.size(),), 'coeffs.shape', 'len(multis)')
+        util.require.equal(self.coeffs.shape, (multis.size(),), 'coeffs.shape', 'len(multis)')
         self.norm_lebesgue = self.coeffs.T.dot(self.coeffs) # =^ L2 norm squared of sqrt(f) and L1 norm of f wrt to the Lebesgue measure
         self.norm = 2**(-self.target.dim) * self.norm_lebesgue # --"-- wrt to the uniform measure
         self.m = len(self.coeffs)
@@ -66,11 +64,11 @@ class Legendre :
         return Legendre(multis=multis, target=de.GaussianPosterior.fromId(dbo.target_id), method=dbo.method)
 
     def evalSqrt(self, x) :
-        x = pointutil.ensure_shape(x, self.dim)
+        x = util.points.ensure_shape(x, self.dim)
         if self.domain is not None :
             # assert x in self.domain
-            x = pointutil.scale(x.T, self.domain.r, [[-1,1]]*self.dim).T
-        basis = legendreutil.evaluate_basis(x, self.multis)
+            x = util.points.scale(x.T, self.domain.r, [[-1, 1]] * self.dim).T
+        basis = util.legendre.evaluate_basis(x, self.multis)
         return np.dot(basis, self.coeffs)
 
     def evalSqrtNrmd(self, x) :
@@ -115,7 +113,7 @@ class SurrogateEvaluation :
             variance = np.inf
             while variance > accurc and len(approx_samples) < max_n :  # 2**32 :
                 if verbose > 1 : print(variance, len(approx_samples))
-                points = randutil.points(d, n)
+                points = util.random.points(d, n)
                 evals_tar = surrog.target.evalSqrt(points)
                 evals_sur = surrog.evalSqrt(points)
                 mean_tar += np.sum(evals_tar**2)
@@ -155,23 +153,22 @@ class SurrogateEvaluation :
 
 if __name__ == '__main__' :
     import Densities as de
-    import logutil
 
-    logutil.print_start('Testing Surrogate Module...', end='\n')
+    util.log.print_start('Testing Surrogate Module...', end='\n')
 
     for save in [True, False] :
 
-        for t in [de.Gaussian(mean=randutil.points(3,1), cova=randutil.covarm(3), save=save)] :  #de.generate_densities(save) :
+        for t in [de.Gaussian(mean=util.random.points(3, 1), cova=util.random.covarm(3), save=save)] :  #de.generate_densities(save) :
             m = mi.TotalDegreeSet(dim=t.dim, order=int(np.ceil(50**(1/t.dim))), save=save)
 
             for mode in ['cheby'] :   #['ls', 'wls', 'ip_leja', 'ip_leggaus', 'wls_leja', 'wls_leggaus'] :
                 s = Legendre(multis=m, target=t, pmode=mode, save=save)
-                s.eval(randutil.points(t.dim))
+                s.eval(util.random.points(t.dim))
                 e = s.computeError()
-                logutil.print_indent(t.name.ljust(15) + str(t.dim).ljust(3) + mode.ljust(12) + str(e.nevals).ljust(6) + ' {:.4f}'.format(e.hedist))
+                util.log.print_indent(t.name.ljust(15) + str(t.dim).ljust(3) + mode.ljust(12) + str(e.nevals).ljust(6) + ' {:.4f}'.format(e.hedist))
                 e.deleteDbo()
                 s.deleteDbo()
             t.deleteDbo()
             m.deleteDbo()
 
-    logutil.print_done()
+    util.log.print_done()
