@@ -89,7 +89,7 @@ def ensure_shape(x, d) :
     return x
 
 
-def bisection(f,y) :
+def bisection(f, y) :
     midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
     interval = [-1, 1]
     x = 0
@@ -102,7 +102,7 @@ def bisection(f,y) :
     return x
 
 
-def chebychev_1d(n) : # https://en.wikipedia.org/wiki/Chebyshev_nodes
+def chebychev_1d(n) :  # https://en.wikipedia.org/wiki/Chebyshev_nodes
     return np.array([np.cos((2*k+1)*np.pi/2/n) for k in range(n)])
 
 
@@ -203,7 +203,7 @@ def get_sample_points_and_weights_random(multis, mode, n) :
         return samples, weights
 
 
-def get_sample_points_and_weights_deterministic(multis, mode, det_mode, n='wls') :
+def get_sample_points_and_weights_deterministic(multis, mode, n='wls') :
     points = {'cheby_det' : chebychev_1d, 'leja' : leja_1d, 'leggaus' : leggaus}[mode]
 
     #TODO think through weights for leja or leggaus below!
@@ -225,7 +225,7 @@ def get_sample_points_and_weights_deterministic(multis, mode, det_mode, n='wls')
     return samples, cheby_weights(samples)
 
 
-def get_sample_points_and_weights(multis, mode, det_mode=None, n='wls') :
+def get_sample_points_and_weights(multis, mode, n='wls') :
     assert mode in ['uni', 'cheby', 'cheby_ss', 'christoffel', 'cheby_det', 'leja', 'leggaus']
     if n == 'ip'  : n = multis.size()
     if n == 'wls' : n = 10 * multis.size() * int(np.log(multis.size()))

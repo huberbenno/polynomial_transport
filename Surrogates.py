@@ -8,7 +8,7 @@ import Database as db
 
 class Legendre :
 
-    def __init__(self, *, multis, target, pmode='cheby', pmode_det=None, n='wls', verbose=0, save=False, domain=None) :
+    def __init__(self, *, multis, target, pmode='cheby', n='wls', verbose=0, save=False, domain=None) :
         util.require.equal(multis.dim, target.dim, 'multis.dim', 'target.dim')
         self.multis = multis
         self.target = target
@@ -26,7 +26,7 @@ class Legendre :
             if verbose > 0 : print('\t SETUP Surrogate')
             start = time.process_time()
 
-            points, weights = util.points.get_sample_points_and_weights(multis, pmode, pmode_det, n)
+            points, weights = util.points.get_sample_points_and_weights(multis, pmode, n)
             lhs = util.legendre.evaluate_basis(points, multis, mode='old')
             if domain is not None :
                 points = util.points.scale(points.T, [[-1, 1]] * self.dim, domain.r).T

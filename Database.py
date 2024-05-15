@@ -87,12 +87,11 @@ class MultiIndexSetAnisotropicDBO(BaseModel) :
 # ---------- Surrogate --------------------
 
 class SurrogateDBO(BaseModel) :
-    target = pw.TextField()
+    target    = pw.TextField()
     target_id = pw.IntegerField()
-    multis = pw.TextField()
+    multis    = pw.TextField()
     multis_id = pw.IntegerField()
     pmode  = pw.TextField()
-    #TODO pmode_det
     condnr = pw.DoubleField(null=True)
     closei = pw.DoubleField(null=True)
 
