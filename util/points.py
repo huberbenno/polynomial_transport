@@ -141,83 +141,58 @@ def leggaus(multiset) :
     return p, None #np.sum(w, axis=0)/np.sum(w)
 
 
-def cheby_weights(samples) :
-    return (np.pi/2)**samples.shape[0] * np.prod(np.sqrt(1-samples**2), axis=0)
+def cheby_weights(points) :
+    return (np.pi/2)**points.shape[0] * np.prod(np.sqrt(1-points**2), axis=0)
 
 
-def get_sample_points_and_weights_legacy(method, multis) :
-    m = multis.size()
-    assert m > 0
-    weights = None
-    if method == 'ip_leja' :
-        samples = leja(multis)
-    elif method == 'ip_leggaus' :
-        samples, weights = leggaus(multis)
-    elif method == 'wls_leja' :
-        k = 1
-        if multis.dim == 1 :
-            k = int(1.5 * multis.maxDegree)
-        else :
-            while ss.binom(k+1, multis.dim-1) <= 1.5 * multis.cardinality :
-                k += 1
-        m = mi.TotalDegreeSet(dim=multis.dim, order=k, save=False)
-        samples = leja(m)
-    elif method == 'wls_leggaus' :
-        k = 1
-        if multis.dim == 1 :
-            k = int(1.5 * multis.maxDegree)
-        else :
-            while ss.binom(k+1, multis.dim-1) <= 1.5 * multis.cardinality :
-                k += 1
-        m = mi.TotalDegreeSet(dim=multis.dim, order=k, save=False)
-        samples, weights = leggaus(m)
-    else : assert False
-    return samples, weights
-
-
-def get_sample_points_and_weights_random(multis, mode, n) :
-    if mode == 'uni' :
+def get_sample_points_and_weights(multis, dist, n) :
+    if dist == 'uni' :
         return np.random.uniform(low=-1, high=1, size=(multis.dim, n)), None
-    if mode == 'cheby' :
-        samples = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, n)))
-        return samples, cheby_weights(samples)
-    if mode == 'cheby_ss' :
+    if dist == 'leja' :
+        return leja(multis), None
+    elif dist == 'leggaus' :
+        return leggaus(multis)
+    if dist == 'cheby' :
+        points = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, n)))
+        return points, cheby_weights(points)
+    if dist == 'cheby_ss' :
         import julia
         julia.Main.include("../BSSsubsampling.jl/src/BSSsubsampling.jl")
-        samples = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, 2*n)))
-        Y = legendre.evaluate_basis(samples, multis)
+        points = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, 2*n)))
+        Y = legendre.evaluate_basis(points, multis)
         idxs, s = julia.Main.BSSsubsampling.bss(Y, n/multis.size(), A=1, B=1)
-        return samples[:, idxs-1], cheby_weights(samples)
-    if mode == 'christoffel' :
+        return points[:, idxs-1], cheby_weights(points)
+    if dist == 'christoffel' :
         polys = [ss.legendre(i)*np.sqrt((2*i + 1)) for i in range(multis.maxDegree+1)]
         polys = [(p*p).integ() for p in polys]
         d = multis.dim
         m = multis.cardinality
-        samples = np.random.uniform(low=-1, high=1, size=(d, n))
+        points = np.random.uniform(low=-1, high=1, size=(d, n))
         weights = np.zeros((n,))
         for j in range(n) :
             idx = multis[np.random.randint(low=0, high=m)].asList()
             for i in range(d) :
-                samples[i,j] = bisection(polys[idx[i]], samples[i,j])
-            weights[j] = m/np.sum([np.prod([polys[k](samples[l,j])**2 for l,k in enumerate(multis[q].asList())]) for q in range(multis.size())])
-        return samples, weights
+                points[i,j] = bisection(polys[idx[i]], points[i,j])
+            weights[j] = m/np.sum([np.prod([polys[k](points[l,j])**2 for l,k in enumerate(multis[q].asList())]) for q in range(multis.size())])
+        return points, weights
 
 
-def get_sample_points_and_weights_deterministic(multis, mode, n='wls') :
-    points = {'cheby_det' : chebychev_1d, 'leja' : leja_1d, 'leggaus' : leggaus}[mode]
+def get_sample_points_and_weights_deterministic(multis, dist, n='wls') :
+    """ !!! EXPERIMENTAL !!! """
+    points = {'cheby_det' : chebychev_1d, 'leja' : leja_1d, 'leggaus' : leggaus}[dist]
 
-    #TODO think through weights for leja or leggaus below!
-    if mode == 'shuffled':
+    # TODO think through weights for leja or leggaus below!
+    if dist == 'shuffled':
         res = []
         for i in range(multis.dim) :
             base = points(n)
             random.rng.shuffle(base)
             res.append(base)
         samples = np.array(res)
-    elif mode == 'tp_light':
+    elif dist == 'tp_light':
         res = list(itertools.product(points(int(np.ceil(n**(1/multis.dim)))), repeat=multis.dim))
         samples = np.array(random.rng.choice(res, size=n, replace=False)).T
-    elif mode == 'sparse_grid' :
+    elif dist == 'sparse_grid' :
         samples = n.getSparseGrid(lambda kmax : np.array(points(kmax)))
     else : assert False
 
@@ -225,20 +200,10 @@ def get_sample_points_and_weights_deterministic(multis, mode, n='wls') :
     return samples, cheby_weights(samples)
 
 
-def get_sample_points_and_weights(multis, mode, n='wls') :
-    assert mode in ['uni', 'cheby', 'cheby_ss', 'christoffel', 'cheby_det', 'leja', 'leggaus']
-    if n == 'ip'  : n = multis.size()
-    if n == 'wls' : n = 10 * multis.size() * int(np.log(multis.size()))
-    if n == 'ls'  : n = multis.size()**2
-
-    if mode in ['uni', 'cheby', 'cheby_ss', 'christoffel'] :
-        return get_sample_points_and_weights_random(multis, mode, n)
-    assert False
-
-
 if __name__ == '__main__' :
     import require
 
+    # Testing ensure_shape
     test_data = [(np.random.rand(3), 3, (3,1)),
                  (np.random.rand(3), 1, (1,3)),
                  (np.random.rand(1,3), 3, (3,1)),
@@ -249,10 +214,11 @@ if __name__ == '__main__' :
     for x, d, shape in test_data :
         assert ensure_shape(x, d).shape == shape
 
+    # Old stuff
     m = mi.TotalDegreeSet(dim=1, order=9)
 
-    for mode in ['christoffel'] :
-        s, w = get_sample_points_and_weights(m, mode)
+    for dist in ['christoffel'] :
+        s, w = get_sample_points_and_weights(m, dist)
         print(s.shape, 0 if w is None else w.shape)
         require.equal(s.shape[0], m.dim, 's.shape[0]', 'm.dim')
         if w is not None : require.equal(w.shape[0], s.shape[1], 'w.shape[0]', 's.shape[1]')

@@ -91,7 +91,8 @@ class SurrogateDBO(BaseModel) :
     target_id = pw.IntegerField()
     multis    = pw.TextField()
     multis_id = pw.IntegerField()
-    pmode  = pw.TextField()
+    mode   = pw.TextField()
+    dist   = pw.TextField()
     condnr = pw.DoubleField(null=True)
     closei = pw.DoubleField(null=True)
 
