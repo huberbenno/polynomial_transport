@@ -23,16 +23,3 @@ def covarm(d) :
 
 def covard(d) :
     return np.diag(np.sort(rng.uniform(low=.01, high=.1, size=(d,)))[::-1])
-
-
-if __name__ == '__main__' :
-
-    for d in [2, 3] :
-
-        print('\n -------------')
-        cov = covard(d)
-        print(' -------------')
-        evals, evecs = np.linalg.eig(cov)
-        for i in range(d) :
-            print(evals[i], evecs[i])
-        print(' -------------\n')

@@ -196,31 +196,4 @@ def get_sample_points_and_weights_deterministic(multis, dist, n='wls') :
         samples = n.getSparseGrid(lambda kmax : np.array(points(kmax)))
     else : assert False
 
-    #require.equal(samples.shape, 'samples.shape', (multis.dim, n), '(multis.dim, n)')
     return samples, cheby_weights(samples)
-
-
-if __name__ == '__main__' :
-    import require
-
-    # Testing ensure_shape
-    test_data = [(np.random.rand(3), 3, (3,1)),
-                 (np.random.rand(3), 1, (1,3)),
-                 (np.random.rand(1,3), 3, (3,1)),
-                 (np.random.rand(1,3), 1, (1,3)),
-                 (np.random.rand(7,6), 6, (6,7)),
-                 (np.random.rand(7,6), 7, (7,6))]
-
-    for x, d, shape in test_data :
-        assert ensure_shape(x, d).shape == shape
-
-    # Old stuff
-    m = mi.TotalDegreeSet(dim=1, order=9)
-
-    for dist in ['christoffel'] :
-        s, w = get_sample_points_and_weights(m, dist)
-        print(s.shape, 0 if w is None else w.shape)
-        require.equal(s.shape[0], m.dim, 's.shape[0]', 'm.dim')
-        if w is not None : require.equal(w.shape[0], s.shape[1], 'w.shape[0]', 's.shape[1]')
-        #s, w = get_sample_points_and_weights('sparse_grid', m, points, n=m)
-        #require.equal(s.shape[0], 's.shape[0]', m.dim, 'm.dim')
