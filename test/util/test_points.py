@@ -1,5 +1,6 @@
-import pytest
-from util.points import *
+import numpy as np
+
+from util import points
 
 
 def test_ensure_shape() :
@@ -11,4 +12,4 @@ def test_ensure_shape() :
                  (np.random.rand(7,6), 7, (7,6))]
 
     for x, d, shape in test_data :
-        assert ensure_shape(x, d).shape == shape
+        assert points.ensure_shape(x, d).shape == shape

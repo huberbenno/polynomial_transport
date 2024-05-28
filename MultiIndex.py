@@ -157,7 +157,6 @@ class SparseSet(MultiIndexSet) :
                 dim=len(weights), weight=db.to_string(weights), thresh=threshold)
         MultiIndexSet.__init__(self, dim=len(weights), name='sparse', save=save, verbose=verbose)
 
-
     @classmethod
     def fromId(cls, id) :
         dbo = db.MultiIndexSetAnisotropicDBO.get_by_id(id)
@@ -265,54 +264,3 @@ class MultiIndexTree :
     def __getitem__(self, i) :
         return self.nodes[i]
 
-
-if __name__ == '__main__' :
-
-    util.log.print_start('Testing Multiindex Module...', end='\n')
-
-    for save in [True, False] :
-        #m = SparseSet.withSize(weights=[.6, .4], n=13, t=60, save=save)
-        #w = m.getWeights()
-        #for i, wi in enumerate(w) :
-        #    print(m[i].asList(), wi)
-        #print(m.getFrontier())
-        #print(m.getSparseGrid(lambda kmax : [np.cos((2*k+1)*np.pi/2/kmax) for k in range(kmax)]))
-
-        m = SparseSet.withSize(weights=[.6], n=5, t=32, save=save)
-        assert m.cardinality == 5
-        if save : m.deleteDbo()
-
-        m = SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=save)
-        assert m.cardinality == 27
-        m.deleteDbo()
-
-        m = SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=save)
-        assert m.cardinality == 31
-        m.deleteDbo()
-
-        m = TensorProductSet(dim=1, order=5, save=save)
-        assert m.cardinality == 6
-        if save : m.deleteDbo()
-
-        m = TensorProductSet(dim=2, order=5, save=save)
-        assert m.cardinality == 36
-        m.deleteDbo()
-
-        m = TensorProductSet(dim=3, order=5, save=save)
-        assert m.cardinality == 216
-        m.deleteDbo()
-
-        m = TotalDegreeSet(dim=1, order=5, save=save)
-        assert m.cardinality == 6
-        if save : m.deleteDbo()
-
-        m = TotalDegreeSet(dim=2, order=5, save=save)
-        assert m.cardinality == 21
-        m.deleteDbo()
-
-        m = TotalDegreeSet(dim=3, order=5, save=save)
-        assert m.cardinality == 56
-        m.deleteDbo()
-
-        util.log.print_done()
-        

@@ -180,17 +180,6 @@ class GaussianPosterior(TargetDensity) :
         if hasattr(self.gauss, 'dbo') : self.gauss.dbo.delete_instance()
 
 
-class Kdiff(TargetDensity) :
-
-    def __init__(self, *, dim, k) :
-        TargetDensity.__init__(self, dim, 'kdiff')
-        self.k = k
-        self.norm = 2 * (1.1 - 1/(k+1))
-
-    def eval(self, x) :
-        return (1.1 - np.prod(x, axis=0)**self.k)/self.norm
-
-
 class Rosenbrock(TargetDensity) :
 
     def __init__(self, *, a=1, b=100, theta=0, centr=np.array([0,0]), scale=2, save=False) :
@@ -280,34 +269,3 @@ class IntermediateDensity(TargetDensity) :
             j = [c.idx for c in n.children]
             r += np.sum([v[i]*p_x[j[i]] for i in range(len(v))], axis=0)**2
         return r
-
-
-def generate_densities(save) :
-    densities = []
-    for d in [1, 3, 5] :
-        arglist = [{'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)},
-                   {'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)}]
-        densities += [GaussianMixture(dim=d, arglist=arglist, save=save)]
-        #densities += [DyingGaussian(mean=util.random.points(d,1), save=save)]
-    for d in util.random.rng.integers(low=1, high=32, size=(3,)) :
-        f = fw.Convolution(basis=util.basis.hats, dim=d, alpha=1, xmeas=util.random.points(10), save=save)
-        densities += [GaussianPosterior(forwd=f, truep=util.random.points(d), noise=util.random.rng.uniform() / 10)]
-        #TODO  Kdiff
-        #densities += [Rosenbrock(a=.2, b=8, theta=-2.2/10*np.pi, centr=np.array([.5,-.5]), scale=1.1)]
-    densities += [Circle(c=util.random.points(2), r=.4, w=.2)]
-    densities += [Hat()]
-    return densities
-
-
-if __name__ == '__main__' :
-
-    util.log.print_start('Testing Density Module...', end='\n')
-
-    for save in [True, False] :
-
-        for t in generate_densities(save) :
-            util.require.equal(t.eval(util.random.points(t.dim, 1)).shape, (1,), 'shape return value of eval single point', 'expected')
-            util.require.equal(t.eval(util.random.points(t.dim, 10)).shape, (10,), 'shape return value of eval multiple points', 'expected')
-            t.deleteDbo()
-
-    util.log.print_done()

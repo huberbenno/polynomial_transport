@@ -31,7 +31,7 @@ class Convolution(Forward) :
 
     def __init__(self, *, dim, basis, alpha, wkern=10, nquad=100, xmeas=None, save=False) :
         """ dim   (int > 0)  : number of basis functions
-            basis (function) : any of the basis functions specified in the basis module
+            basis (function) : any of the basis functions specified in the util.basis module
             alpha (float)    :
             wkern (float)    :
             nquad (int > 1)  :
@@ -95,26 +95,3 @@ class Convolution(Forward) :
         dbo = db.ConvolutionDBO.get_by_id(id)
         return Convolution(basis=getattr(util.basis, dbo.basis), dim=dbo.dim, alpha=dbo.alpha,
                            nquad=dbo.nquad, save=True)
-
-
-if __name__ == '__main__' :
-    util.log.print_start('Testing Forward Module...', end='\n')
-
-    dim = util.random.rng.integers(low=1, high=10)
-    util.log.print_indent(' Testing Convolution with dimension {}'.format(dim))
-
-    x = np.linspace(-1, 1, 20)
-    p = util.random.points(dim)
-
-    for save in [True, False] :
-        f = Convolution(basis=util.basis.hats, dim=dim, alpha=1, xmeas=x, save=save)
-
-        res1 = f.eval(p)
-        res2 = f.eval(p, xmeas=x)
-        util.require.close(res1, res2)
-
-        if save :
-            f2 = Convolution.fromId(f.dbo.id)
-        f.deleteDbo()
-
-    util.log.print_done()

@@ -1,8 +1,9 @@
 import time
 import numpy as np
 
-from MultiIndex import *
 from util import legendre, require, random
+
+import MultiIndex as mi
 
 
 def test_get_polys() :
@@ -32,7 +33,7 @@ def test_get_integrated_products() :
 
 
 def test_evaluate_basis_equality():
-    multis = SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
+    multis = mi.SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
 
     for _ in range(100):
         x = random.points(multis.dim, 1)
@@ -44,7 +45,7 @@ def test_evaluate_basis_equality():
 
 def test_evaluate_basis_runtime() :
 
-    multis = SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
+    multis = mi.SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
 
     start = time.process_time()
     for _ in range(100) :
