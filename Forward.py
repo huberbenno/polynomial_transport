@@ -54,13 +54,14 @@ class Convolution(Forward) :
         # for $f$ given as $f = \sum_{i=1}^d p_i b_i$.
         self.M = None
         if xmeas is not None :
-            self.xmeas = xmeas
-            self.M = np.zeros((len(xmeas), dim))
+            self.xmeas = np.squeeze(xmeas)
+            assert self.xmeas.ndim == 1
+            self.M = np.zeros((len(self.xmeas), dim))
             for j in range(dim) :
                 # Vector of weighted evaluations of the j-th basis functions at the quadrature nodes
                 q_x = np.array([w * self.basis(x, [0]*j + [1], self.alpha) for x,w in zip(self.x_quad, self.w_quad)]).T
-                for i in range(len(xmeas)) :
-                    e_x = np.array([np.exp(-self.wkern*(xmeas[i] - xj)**2) for xj in self.x_quad])
+                for i in range(len(self.xmeas)) :
+                    e_x = np.array([np.exp(-self.wkern*(self.xmeas[i] - xj)**2) for xj in self.x_quad])
                     self.M[i, j] = np.dot(q_x, e_x) / self.n
 
         if save :

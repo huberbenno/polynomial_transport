@@ -115,7 +115,7 @@ def leja_1d(n) :
             r.append(-r[j-1])
         else :
             r.append(np.sqrt((r[int((j+1)/2)] + 1) / 2))
-    return np.array(r).reshape((len(r),1))
+    return np.array(r)
 
 
 def leja(multiset) :
