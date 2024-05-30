@@ -8,7 +8,7 @@ import Database as db
 
 class MultiIndex :
 
-    def __init__(self, idxs=[]) :
+    def __init__(self, idxs=()) :
         self.d = len(idxs)
         self.idxs = idxs
 
@@ -24,7 +24,7 @@ class MultiIndex :
 
 class MultiIndexSparse :
 
-    def __init__(self, ilist=[]) :
+    def __init__(self, ilist=()) :
         self.d = len(ilist)
         self.nzs = it.filterfalse(lambda x : x[1]==0, enumerate(ilist))  # TODO binary search tree
 

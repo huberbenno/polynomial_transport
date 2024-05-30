@@ -148,7 +148,7 @@ class TransportMap :
             p_tar[:,j] = self.inveval(p_uni[:,j])
         return p_uni, p_tar
 
-    def grid(self, xs=[-1, -.9, -.8, -.4, 0, .4, .8, .9, 1], ns=[100, 50, 20,20, 20, 20, 50, 100]) :
+    def grid(self, xs=(-1, -.9, -.8, -.4, 0, .4, .8, .9, 1), ns=(100, 50, 20, 20, 20, 20, 50, 100)) :
         assert self.d == 2
         lines = []
         k = np.sum(ns) + 1

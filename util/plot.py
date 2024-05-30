@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_ax(*, fig=None, nx=1, ny=1, idx=1, title='', xlabel='', ylabel='', square=False, logaxis=[], projection=None) :
+def get_ax(*, fig=None, nx=1, ny=1, idx=1, title='', xlabel='', ylabel='', square=False, logaxis=(), projection=None) :
     if fig is None : fig = plt.figure()
     ax = fig.add_subplot(ny, nx, idx, projection=projection, xlabel=xlabel, ylabel=ylabel, title=title)
     if 'x' in logaxis : ax.set_xscale('log')
@@ -19,7 +19,7 @@ def get_ax(*, fig=None, nx=1, ny=1, idx=1, title='', xlabel='', ylabel='', squar
 
 
 def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, figsize=12,
-                    n=200, xlim=[-1,1], ylim=[-1,1], nlevels=7,
+                    n=200, xlim=(-1,1), ylim=(-1,1), nlevels=7,
                     alpha=1, qcs=None, cmap='Blues', filename=None) :
     if ax is None :
         if fig is None : fig = plt.figure(figsize=(figsize,figsize))

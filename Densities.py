@@ -211,7 +211,7 @@ class Circle(TargetDensity) :
 
 
 class Hat(TargetDensity) :
-    def __init__(self, *, c=[-.5,.3], m=1, x=[-.7,-.3], y=[.2,.6], theta=0, scale=1) :
+    def __init__(self, *, c=(-.5,.3), m=1, x=(-.7,-.3), y=(.2,.6), theta=0, scale=1) :
         assert x[0] <= c[0] <= x[1] and y[0] <= c[1] <= y[1]
         TargetDensity.__init__(self, 2, 'Hats')
         self.arcsins1 = np.array([m/(c[0]-x[0]), m/(c[1]-y[0]), m/(x[1]-c[0]), m/(y[1]-c[1])])
