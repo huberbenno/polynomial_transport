@@ -30,7 +30,7 @@ def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, fi
     y = np.linspace(*ylim,n)
     X, Y = np.meshgrid(x, y)
     pts = np.vstack((X.flatten(), Y.flatten()))
-    Ztar = np.ones((len(x), len(x)))
+    Ztar = np.zeros((len(x), len(x)))
     if density is not None :
         Ztar = density.eval(pts).reshape((len(x), len(x)))
     if qcs is not None :

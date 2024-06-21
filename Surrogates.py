@@ -111,6 +111,9 @@ class Legendre :
         if self.norm == 0 : return 0
         return self.evalSqrt(x) / np.sqrt(self.norm)
 
+    def evalNrmd(self, x) :
+        return self.eval(x) / self.norm_lebesgue
+
     def eval(self, x) :
         return self.evalSqrt(x)**2
 
@@ -186,4 +189,3 @@ class SurrogateEvaluation :
 
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
-
