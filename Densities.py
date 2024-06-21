@@ -17,11 +17,11 @@ class TargetDensity :
         self.norm = None
         self.norm_lebesgue = None
 
+    def __eval__(self, x):
+        raise NotImplementedError('This method has to be implemented by subclasses!')
+
     def eval(self, x) :
-        assert isinstance(x, np.ndarray)
-        assert len(x.shape) <= 2
-        util.require.equal(x.shape[0], self.dim, 'x.shape[0]', 'self.dim')
-        n = 1 if len(x.shape) == 1 else x.shape[1]
+        x = util.points.ensure_shape(x, self.dim)
         y = self.__eval__(x)
         assert isinstance(y, np.ndarray)
         return y
@@ -61,26 +61,19 @@ class TargetDensity :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
 
 
-class Gaussian1D(TargetDensity) :
+class Uniform(TargetDensity) :
+    def __init__(self, *, dim=2, c=1) :
+        TargetDensity.__init__(self, dim, 'Uniform')
+        self.c = c
 
-    def __init__(self, *, mean=None, cova=None, save=False) :
-        TargetDensity.__init__(self, 1, 'gaussian')
-        self.mean = mean
-        self.cova = cova
-        self.norm = np.sqrt(2*np.pi * cova)
-        if save :
-            self.dbo, _ = db.GaussianDBO.get_or_create(
-                dim=1, mean=db.to_string(mean), cova=db.to_string(cova))
-
-    def eval(self, x) :
-        if len(x.shape) > 1 : x = np.squeeze(x)
-        return np.exp(-.5 * (x - self.mean)**2 / self.cova) / self.norm
+    def __eval__(self, x) :
+        return np.ones(x.shape[1]) * self.c / 2**self.dim
 
 
 class Gaussian(TargetDensity) :
 
     def __init__(self, *, mean, cova, save=False) :
-        assert(len(mean.shape) == 1 or mean.shape[1] == 1)
+        assert len(mean.shape) == 1 or mean.shape[1] == 1
         self.mean = np.array(mean)
         self.cova = np.array(cova)
         if len(self.mean.shape) == 1 : self.mean = np.expand_dims(self.mean, axis=1)
@@ -114,30 +107,9 @@ class DyingGaussian(TargetDensity) :
                 dim=self.dim, mean=db.to_string(self.mean),
                 cova=db.to_string(np.diag([1/w for w in self.weights])), diag=True)
 
-    def eval(self, x) :
-        diff = self.mean - 100*np.multiply(x, self.weights)
-        return np.exp(-.5 * np.sum(diff**2,axis=0))
-
-
-class GaussianMixture(TargetDensity) :
-
-    def __init__(self, *, dim, arglist, save=False) :
-        TargetDensity.__init__(self, dim, 'gaussianmm')
-        assert 1 < len(arglist) < 5
-        self.n = len(arglist)
-        self.gaussians = [Gaussian(mean=arg['mean'], cova=arg['cova'], save=save) for arg in arglist]
-        if save :
-            glist = [g.dbo.id for g in self.gaussians] + [None]*(5 - len(self.gaussians))
-            self.dbo, _ = db.GaussianMmDBO.get_or_create(
-                dim=self.dim, gauss1=glist[0], gauss2=glist[1], gauss3=glist[2], gauss4=glist[3], gauss5=glist[4])
-
     def __eval__(self, x) :
-        return np.sum([g.eval(x) for g in self.gaussians], axis=0) / self.n
-
-    def deleteDbo(self) :
-        if hasattr(self, 'dbo') : self.dbo.delete_instance()
-        for g in self.gaussians :
-            g.deleteDbo()
+        diff = self.mean - 100*np.multiply(x, self.weights)
+        return np.exp(-.5 * np.sum(diff**2, axis=0))
 
 
 class GaussianPosterior(TargetDensity) :
@@ -160,7 +132,7 @@ class GaussianPosterior(TargetDensity) :
             self.dbo, _ = db.GaussianPosteriorDBO.get_or_create(
                 forwd=self.forwd.dbo.id, gauss=self.gauss.dbo.id, truep=db.to_string(truep), noise=noise, xmeas=db.to_string(forwd.xmeas))
 
-    def eval(self, x):
+    def __eval__(self, x):
         return self.gauss.eval(self.forwd.eval(x))
 
     @classmethod
@@ -193,7 +165,7 @@ class Rosenbrock(TargetDensity) :
             self.dbo, _ = db.RosenbrockDBO.get_or_create(
                 a=a, b=b, theta=theta, centr=db.to_string(centr), scale=scale)
 
-    def eval(self, x) :
+    def __eval__(self, x) :
         x = self.scale * np.dot(self.rotation, x - self.centr[:, np.newaxis])
         return np.exp(-(self.a - x[0])**2 - self.b * (x[1] - x[0]**2)**2)
 
@@ -206,7 +178,7 @@ class Circle(TargetDensity) :
         self.w = w
         #self.dbo, _ = db.CircleDBO.get_or_create(c=db.to_string(c), r=r, w=w)
 
-    def eval(self, x) :
+    def __eval__(self, x) :
         return np.exp(-(abs((x[0,:]-self.c[0])**2 + (x[1,:]-self.c[1])**2 - self.r))/self.w)
 
 
@@ -221,7 +193,7 @@ class Hat(TargetDensity) :
         self.rotation = np.array([[np.cos(theta), - np.sin(theta)], [np.sin(theta), np.cos(theta)]])
         self.scale = scale
 
-    def eval(self, x) :
+    def __eval__(self, x) :
         x = self.scale * np.dot(self.rotation, x)
         res = np.zeros((x.shape[1]))
         ind = (x[0,:] >= self.x[0]) & (x[0,:] <= self.x[1]) & (x[1,:] >= self.y[0]) & (x[1,:] <= self.y[1])
@@ -234,23 +206,19 @@ class Hat(TargetDensity) :
 
 
 class MultimodalDensity(TargetDensity) :
-    def __init__(self, *, densities, weights) :
-        assert len(densities) == len(weights)
-        TargetDensity.__init__(self, 2, 'MultimodalDensity')
+    def __init__(self, *, densities, weights=None) :
+        if weights is not None : assert len(densities) == len(weights)
+        dim = densities[0].dim
+        for d in densities : assert d.dim == dim
+        TargetDensity.__init__(self, dim, 'MultimodalDensity')
         self.densities = densities
         self.weights = weights
 
-    def eval(self, x) :
-        return np.sum([w*d.eval(x) for w, d in zip(self.weights,self.densities)], axis=0)
-
-
-class Uniform(TargetDensity) :
-    def __init__(self, *, dim=2, c=1) :
-        TargetDensity.__init__(self, dim, 'Uniform')
-        self.c = c
-
-    def eval(self, x) :
-        return np.ones(x.shape[1]) * self.c / 2**self.dim
+    def __eval__(self, x) :
+        if self.weights is None :
+            return np.sum([d.eval(x) for d in self.densities], axis=0)
+        else :
+            return np.sum([w*d.eval(x) for w, d in zip(self.weights,self.densities)], axis=0)
 
 
 class IntermediateDensity(TargetDensity) :

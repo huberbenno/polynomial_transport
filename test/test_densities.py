@@ -12,9 +12,9 @@ def generate_densities(save) :
     densities = []
 
     for d in [1, util.random.rng.integers(low=2, high=8)] :
-        arglist = [{'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)},
-                   {'mean' : util.random.points(d, 1), 'cova' : util.random.covarm(d)}]
-        densities += [de.GaussianMixture(dim=d, arglist=arglist, save=save)]
+        gaussians = [de.Gaussian(mean=util.random.points(d, 1), cova=util.random.covarm(d), save=False),
+                     de.Gaussian(mean=util.random.points(d, 1), cova=util.random.covarm(d), save=False)]
+        densities += [de.MultimodalDensity(densities=gaussians)]
 
     d = util.random.rng.integers(low=4, high=8)
     densities += [de.DyingGaussian(mean=util.random.points(d,1), save=save)]
