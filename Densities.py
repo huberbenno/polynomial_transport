@@ -221,19 +221,3 @@ class MultimodalDensity(TargetDensity) :
             return np.sum([w*d.eval(x) for w, d in zip(self.weights,self.densities)], axis=0)
 
 
-class IntermediateDensity(TargetDensity) :
-    def __init__(self, multitree) :
-        TargetDensity.__init__(self, 2, 'IntermediateDensity')
-        self.multitree = multitree
-
-    def eval(self, x) :
-        m = self.multitree.maxOrders[0]
-        r = 0
-        p_x = legvander(np.array([x[0]]), m+2)[0].T
-        for i in range(p_x.shape[0]) :
-            p_x[i] *= np.sqrt((2*i + 1)/2)
-        for n in self.multitree[1] :
-            v = [c.val for c in n.children]
-            j = [c.idx for c in n.children]
-            r += np.sum([v[i]*p_x[j[i]] for i in range(len(v))], axis=0)**2
-        return r
