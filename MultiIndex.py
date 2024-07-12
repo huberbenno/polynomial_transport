@@ -54,7 +54,7 @@ class MultiIndexSet :
         self.dim = dim
         self.maxOrders = [0] * self.dim
         self.verbose = verbose
-        self.setup()
+        self.__setup__()
         self.maxDegree = max(self.maxOrders)
         self.cardinality = len(self.idxs)
         self.weightsForLegendreL2Normalization = None
@@ -64,11 +64,8 @@ class MultiIndexSet :
             self.dbo.size = self.cardinality
             self.dbo.save()
 
-    def setup1d(self, k) :
-        if self.verbose : print('setup 1D')
-        assert len(self.idxs) == 0
-        for idx in range(k+1) :
-            self.add(MultiIndex([idx]))
+    def __setup__(self) :
+        raise NotImplementedError('This method has to be implemented by subclasses!')
 
     def __getitem__(self, i) : return self.idxs[i]
 
@@ -121,7 +118,7 @@ class TensorProductSet(MultiIndexSet) :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(dim=dim, mode='tensorproduct', order=order)
         MultiIndexSet.__init__(self, name='tensorproduct', dim=dim, save=save, verbose=verbose)
 
-    def setup(self) :
+    def __setup__(self) :
         if self.verbose : print('setup TensorProductSet')
         assert len(self.idxs) == 0
         for idx in it.product(range(self.order+1), repeat=self.dim) :
@@ -136,7 +133,7 @@ class TotalDegreeSet(MultiIndexSet) :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(dim=dim, mode='totaldegree', order=order)
         MultiIndexSet.__init__(self, name='totaldegree', dim=dim, save=save, verbose=verbose)
 
-    def setup(self) :
+    def __setup__(self) :
         if self.verbose : print('setup TotalDegreeSet')
         assert len(self.idxs) == 0
         for idx in it.filterfalse(lambda x : sum(x) > self.order,
@@ -167,7 +164,7 @@ class SparseSet(MultiIndexSet) :
             thresh = db.fr_string(dbo.thresh)[0]
         return SparseSet(weights=db.fr_string(dbo.weight), threshold=thresh)
 
-    def setup(self) :
+    def __setup__(self) :
         if self.verbose : print('setup SparseSet')
         assert len(self.idxs) == 0
         base = np.zeros((len(self.weights),), dtype=np.int64)
