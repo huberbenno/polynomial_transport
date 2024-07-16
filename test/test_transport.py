@@ -1,3 +1,4 @@
+import numpy as np
 
 import util
 
@@ -11,33 +12,44 @@ import setup
 def test_transport() :
 
     util.log.print_start('Testing Transport Module...', end='\n')
-    util.log.print_indent('d = 1')
 
     setup.database()
 
-    t = de.Gaussian(mean=util.random.points(1, 1), cova=util.random.covarm(1))
-    m = mi.TensorProductSet(dim=1, order=5)
-    s = su.Legendre(multis=m, target=t)
+    for d in [1,2,3] :
+        util.log.print_indent(f'd = {d}')
 
-    tt = tm.TransportMap(s)
-    tt.test()
+        t = de.Gaussian(mean=util.random.points(d, 1), cova=util.random.covarm(d))
+        m = mi.TensorProductSet(dim=d, order=2)
+        s = su.Legendre(multis=m, target=t)
 
-    s.deleteDbo()
-    m.deleteDbo()
-    t.deleteDbo()
+        tt = tm.TransportMap(s)
 
-    util.log.print_indent('d = 2')
+        print(' - testing domain boundaries ...')
+        y = tt.eval([1]*tt.d)
+        for yi in y : util.require.close(yi, 1)
+        y = tt.eval([-1]*tt.d)
+        for yi in y : util.require.close(yi, -1, atol=1e-4)
 
-    t = de.Gaussian(mean=util.random.points(2, 1), cova=util.random.covarm(2))
-    #t = de.Rosenbrock(a=.15, b=10)
-    m = mi.TotalDegreeSet(dim=2, order=3)
-    s = su.Legendre(multis=m, target=t)
+        print(' - testing inverse ... ', end='')
+        for i in range(5) :
+            print(i, end=' ')
+            x = util.random.points(d, 0)
+            y = tt.eval(x)
+            util.require.close(tt.inveval(y), x, atol=1e-4)
+        print()
 
-    tt = tm.TransportMap(s)
-    tt.test()
+        print(' - testing determinant ...', end='')
+        delta = .00001
+        for i in range(3) :
+            print(i, end=' ')
+            x = util.random.points(tt.d, 0)
+            det_S = np.prod((tt.eval(x+delta) - tt.eval(x-delta)) / (2*delta))*2**(-d)
+            # huge atol here because finite difference approximation is not very stable, in particular for higher d
+            util.require.close(det_S, tt.surrogate.evalNrmd(np.expand_dims(x, axis=1))[0], atol=.5)
+        print()
 
-    s.deleteDbo()
-    m.deleteDbo()
-    t.deleteDbo()
+        s.deleteDbo()
+        m.deleteDbo()
+        t.deleteDbo()
 
     util.log.print_done()

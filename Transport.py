@@ -15,9 +15,8 @@ class TransportMap :
         """
         x : np.array with shape=(d,)
         """
-        #x = np.squeeze(x)
-        #print(x, x.size)
-        #if x.size > 1 : assert(len(x) == self.d)
+        x = np.atleast_1d(np.squeeze(np.array(x)))
+        assert len(x.shape) == 1 and len(x) == self.d
 
         S = np.zeros((self.d,))
 
@@ -114,31 +113,6 @@ class TransportMap :
 
     def det_dS(self, x) :
         return self.density(x) / self.norm_lebesgue
-
-    def test(self) :
-
-        print('Testing transport map functionality:')
-        print(' - testing domain boundaries ...')
-        y = self.eval(np.array([1]*self.d))
-        for yi in y : util.require.close(yi, 1)
-        y = self.eval(np.array([-1]*self.d))
-        for yi in y : util.require.close(yi, -1, atol=1e-3)
-
-        print(' - testing inverse ... ', end='')
-        for i in range(5) :
-            print(i, end=' ')
-            x = np.random.uniform(low=-1, high=1, size=(self.d,))
-            y = self.eval(x)
-            util.require.close(self.inveval(y), x, atol=1e-3)
-
-        #print(' - testing determinant ...')
-        #for i in range(3) :
-        #    x = np.random.uniform(low=-1, high=1, size=(self.d,))
-        #    delta = .0000001*np.ones(x.shape)
-        #    differences = (self.eval(x+delta) - self.eval(x-delta))*20000000
-        #    det_S = np.prod(differences)
-        #    require.close(det_S, self.surrogate.eval(np.expand_dims(x, axis=1))[0])
-        print('done!')
 
     def samples(self, n, p_uni=None) :
         if p_uni is None :
