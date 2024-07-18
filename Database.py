@@ -1,9 +1,9 @@
-import base64
+import base64, os
 import numpy as np
 import peewee as pw
 
 #TODO unique constraints
-DB = pw.SqliteDatabase('data.db')
+DB = pw.SqliteDatabase(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data.db'))
 # DB = pw.SqliteDatabase(':memory:')
 
 
