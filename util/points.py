@@ -89,14 +89,14 @@ def ensure_shape(x, d) :
     return x
 
 
-def bisection(f, y) :
+def bisection(f, y, *, interval=(-1,1), n=30) :
     midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
-    interval = [-1, 1]
-    x = 0
+    x = midpoint(interval)
     candidate = f(x)
-    for _ in range(30) :
-        if candidate > y : interval = [interval[0],  x]
-        else :             interval = [x, interval[1]]
+    for _ in range(n) :
+        if   candidate > y : interval = [interval[0],  x]
+        elif candidate < y : interval = [x, interval[1]]
+        else : break
         x = midpoint(interval)
         candidate = f(x)
     return x

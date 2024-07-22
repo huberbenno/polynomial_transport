@@ -21,7 +21,7 @@ class Legendre :
             The multi-index set $\\Lambda$ defining the polynomial ansatz space in which the approximation to
             $\\sqrt{f}$ is constructed.
         mode : str
-            Approximation method determining the number of support points in terms of m := multis.size().
+            Approximation method determining the number of support points in terms of m := multis.cardinality.
             Valid choices are
             - 'ip' : interpolation, uses m support points
             - 'wls' : weighted least squares, uses 10 * m * int(log(m)) support points
@@ -91,7 +91,7 @@ class Legendre :
                 self.dbo.coeffs = db.to_string(self.coeffs)
                 self.dbo.save()
 
-        util.require.equal(self.coeffs.shape, (multis.size(),), 'coeffs.shape', 'len(multis)')
+        util.require.equal(self.coeffs.shape, (multis.cardinality,), 'coeffs.shape', 'len(multis)')
 
         # L2 norm squared of sqrt(f) and L1 norm of f wrt to the Lebesgue measure
         self.norm_lebesgue = self.coeffs.T.dot(self.coeffs)

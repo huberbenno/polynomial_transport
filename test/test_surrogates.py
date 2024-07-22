@@ -28,7 +28,7 @@ def test_legendre() :
                 s.eval(util.random.points(t.dim))
                 e = s.computeError()
                 if save : util.log.print_indent(t.name.ljust(15) + str(t.dim).ljust(3) + mode.ljust(12)
-                                                + dist.ljust(12) + str(m.size()).ljust(7)
+                                                + dist.ljust(12) + str(m.cardinality).ljust(7)
                                                 + str(e.nevals).ljust(6) + ' {:.4f}'.format(e.hedist))
                 e.deleteDbo()
                 s.deleteDbo()

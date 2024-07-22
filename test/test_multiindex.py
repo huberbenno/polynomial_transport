@@ -1,3 +1,5 @@
+import numpy as np
+
 import util
 
 import MultiIndex as mi
@@ -13,15 +15,16 @@ def test_multiindex() :
 
     for save in [True, False] :
 
-        m = mi.SparseSet.withSize(weights=[.6], n=5, t=32, save=save)
+        m = mi.AnisotropicSet(weights=np.log([1/.6]), cardinality=5, save=save, verbose=1)
         assert m.cardinality == 5
         if save : m.deleteDbo()
 
-        m = mi.SparseSet.withSize(weights=[.6, .4], n=27, t=60, save=save)
+        m = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4]), cardinality=27, save=save, verbose=1)
+        m.print()
         assert m.cardinality == 27
         m.deleteDbo()
 
-        m = mi.SparseSet.withSize(weights=[.6, .4, .1, .01], n=31, t=60, save=save)
+        m = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4, 1/.1, 1/.01]), cardinality=31, save=save, verbose=1)
         assert m.cardinality == 31
         m.deleteDbo()
 

@@ -69,19 +69,14 @@ class MultiIndexSetDBO(BaseModel) :
     dim   = pw.IntegerField()
     mode  = pw.TextField()
     order = pw.IntegerField()
-
-    size  = pw.IntegerField(null=True)
-    ctime = pw.DoubleField(null=True)
-    #TODO create or dump binaries?
+    size  = pw.IntegerField()
 
 
 class MultiIndexSetAnisotropicDBO(BaseModel) :
     dim    = pw.IntegerField()
     weight = pw.TextField()
     thresh = pw.DoubleField()
-
-    size   = pw.IntegerField(null=True)
-    ctime  = pw.DoubleField(null=True)
+    size   = pw.IntegerField()
 
 
 # ---------- Surrogate --------------------

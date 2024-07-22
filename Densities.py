@@ -137,7 +137,7 @@ class GaussianPosterior(TargetDensity) :
 
     @classmethod
     def fromConfig(cls, *, fwd, noise) :
-        dbos = db.GaussianPosteriorDBO.select().where(db.GaussianPosteriorDBO.forwd_id == fwd.dbo.id,
+        dbos = db.GaussianPosteriorDBO.select().where(db.GaussianPosteriorDBO.forwd == fwd.dbo.id,
                                                       db.GaussianPosteriorDBO.noise == noise,
                                                       db.GaussianPosteriorDBO.xmeas == db.to_string(fwd.xmeas))
         res = []

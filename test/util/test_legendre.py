@@ -33,7 +33,7 @@ def test_get_integrated_products() :
 
 
 def test_evaluate_basis_equality():
-    multis = mi.SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
+    multis = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4, 1/.3]), cardinality=7)
 
     for _ in range(100):
         x = random.points(multis.dim, 1)
@@ -45,7 +45,7 @@ def test_evaluate_basis_equality():
 
 def test_evaluate_basis_runtime() :
 
-    multis = mi.SparseSet.withSize(weights=[.6, .4, .3], n=7, t=60)
+    multis = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4, 1/.3]), cardinality=7)
 
     start = time.process_time()
     for _ in range(100) :

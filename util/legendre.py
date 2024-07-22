@@ -49,7 +49,7 @@ def evaluate_basis(x, multis, mode='') :
 
     if mode == 'old' :
         indices = multis.asLists()
-        m = multis.size()
+        m = multis.cardinality
         assert m == len(indices)
 
         van = legvander(x, multis.maxDegree)  # shape = (d, n, max(indices)+1)

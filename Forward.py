@@ -69,7 +69,7 @@ class Convolution(Forward) :
                 dim=dim, basis=basis.__name__, alpha=alpha, nquad=nquad, wkern=wkern)
 
     def dimWeights(self) :
-        return [2**(-self.alpha*np.ceil(np.log2(i+1))) for i in range(1, self.dim+1)]
+        return [np.log2(i+2) for i in range(self.dim)]
 
     def __eval__(self, p, xmeas=None) :
         assert self.M is not None or xmeas is not None
