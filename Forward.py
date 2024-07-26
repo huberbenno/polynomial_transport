@@ -22,6 +22,9 @@ class Forward :
 
         return res
 
+    def __eval__(self, x):
+        raise NotImplementedError('This method has to be implemented by subclasses!')
+
 
 class Convolution(Forward) :
     """ Convolution of a function $f : [-1,1] -> [-1,1]$ expressed in some basis $(b_i)_{i=1}^d$
