@@ -35,7 +35,7 @@ class MultiIndex :
 
 class MultiIndexSet :
 
-    def __init__(self, *, name, dim, idxs, save=False, verbose=False) :
+    def __init__(self, *, name, dim, idxs, save=False) :
         self.name = name
         self.dim = dim
         self.idxs = idxs
@@ -73,7 +73,7 @@ class TensorProductSet(MultiIndexSet) :
 
         idxs = [MultiIndex(dim, dense=idx) for idx in it.product(range(self.order+1), repeat=dim)]
 
-        MultiIndexSet.__init__(self, name='tensorproduct', dim=dim, idxs=idxs, save=save, verbose=verbose)
+        MultiIndexSet.__init__(self, name='tensorproduct', dim=dim, idxs=idxs, save=save)
 
         if save :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(
@@ -89,7 +89,7 @@ class TotalDegreeSet(MultiIndexSet) :
         itr = it.product(range(order+1), repeat=dim)
         idxs = [MultiIndex(dim, dense=idx) for idx in it.filterfalse(filtr, itr)]
 
-        MultiIndexSet.__init__(self, name='totaldegree', dim=dim, idxs=idxs, save=save, verbose=verbose)
+        MultiIndexSet.__init__(self, name='totaldegree', dim=dim, idxs=idxs, save=save)
 
         if save :
             self.dbo, _ = db.MultiIndexSetDBO.get_or_create(
@@ -99,7 +99,7 @@ class TotalDegreeSet(MultiIndexSet) :
 class AnisotropicSet(MultiIndexSet) :
 
     def __init__(self, *, weights, cardinality, save=False, verbose=False) :
-        if verbose > 0 : print(f'\t SETUP AnisotropicSet (cardinality={cardinality})')
+        if verbose > 0 : print(f'\t AnisotropicSet with cardinality={cardinality} / ', end='')
 
         for i in range(len(weights)-1) :
             assert weights[i+1] > 0
@@ -116,11 +116,12 @@ class AnisotropicSet(MultiIndexSet) :
         l = util.points.bisection(f, cardinality, interval=l_interval)
         idxs = [MultiIndex(d, sparse=idx) for idx in self._setup_idxs(k, l, cutoff=len(k))]
 
-        MultiIndexSet.__init__(self, name='sparse', dim=d, idxs=idxs, save=save, verbose=verbose)
+        MultiIndexSet.__init__(self, name='sparse', dim=d, idxs=idxs, save=save)
 
         if save :
             self.dbo, _ = db.MultiIndexSetAnisotropicDBO.get_or_create(
                 dim=d, weight=db.to_string(k), thresh=l, size=len(idxs))
+        if verbose > 0 : print('done.')
 
     def _setup_idxs(self, k, l, i=0, idx=None, *, cutoff=None) :
         if idx is None : idx = {}
