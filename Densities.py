@@ -44,6 +44,7 @@ class TargetDensity :
         #self.norm_lebesgue = res[0][0]
         #self.norm = 2**(self.dim) * self.norm_lebesgue
 
+        print('WARNING: Computing an MC approximation of the norm - this will likely be either expensive or inaccurate!')
         N, s, s2 = 0, 0, 0
         while N < max_N :
             n = max(min_N, int(0.2 * N))
@@ -176,7 +177,6 @@ class Circle(TargetDensity) :
         self.c = c
         self.r = r
         self.w = w
-        #self.dbo, _ = db.CircleDBO.get_or_create(c=db.to_string(c), r=r, w=w)
 
     def __eval__(self, x) :
         return np.exp(-(abs((x[0,:]-self.c[0])**2 + (x[1,:]-self.c[1])**2 - self.r))/self.w)
