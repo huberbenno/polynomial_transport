@@ -43,11 +43,11 @@ def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, fi
             ax.plot(line[0], line[1], '#c8c8c8', lw=2, zorder=2)
     # samples
     if samples is not None :
-        ax.scatter(samples[0], samples[1], s=7, color='#e41a1c', alpha=.9, zorder=3)
+        ax.scatter(samples[0], samples[1], s=7, color='k', alpha=.9, zorder=3)
 
     plt.tight_layout()
     if filename is not None :
-        plt.savefig('/home/uq/' + filename + '.pdf')
+        plt.savefig(filename)
     return qcs, ax
 
 
