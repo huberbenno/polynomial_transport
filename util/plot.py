@@ -19,7 +19,7 @@ def get_ax(*, fig=None, nx=1, ny=1, idx=1, title='', xlabel='', ylabel='', squar
 
 
 def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, figsize=12,
-                    n=200, xlim=(-1,1), ylim=(-1,1), nlevels=7,
+                    n=200, xlim=(-1,1), ylim=(-1,1), nlevels=7, mask_zeros=True,
                     alpha=1, qcs=None, cmap='Blues', filename=None) :
     if ax is None :
         if fig is None : fig = plt.figure(figsize=(figsize,figsize))
@@ -37,6 +37,9 @@ def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, fi
         qcs = ax.contourf(X, Y, Ztar, levels=qcs.levels, extend='both', cmap=cmap, alpha=alpha, zorder=1)
     else :
         qcs = ax.contourf(X, Y, Ztar, levels=nlevels, cmap=cmap, alpha=alpha, zorder=1)
+    if mask_zeros and density is not None :
+        Z_mask = np.ma.masked_where(Ztar > 0, Ztar)
+        ax.contourf(X, Y, Z_mask, levels=[0, Ztar.max()], colors='white', zorder=2)
     # grid
     if grid is not None :
         for line in grid :

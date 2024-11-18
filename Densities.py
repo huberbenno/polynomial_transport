@@ -194,11 +194,11 @@ class Hat(TargetDensity) :
         self.scale = scale
 
     def __eval__(self, x) :
-        x = self.scale * np.dot(self.rotation, x)
+        x = np.dot(self.rotation, x - self.c[:, None]) + self.c[:, None]
         res = np.zeros((x.shape[1]))
         ind = (x[0,:] >= self.x[0]) & (x[0,:] <= self.x[1]) & (x[1,:] >= self.y[0]) & (x[1,:] <= self.y[1])
         if ind.any() :
-            res[ind] = np.vstack((self.arcsins1[0] * np.abs(self.x[0] - x[0, ind]),
+            res[ind] = self.scale * np.vstack((self.arcsins1[0] * np.abs(self.x[0] - x[0, ind]),
                                   self.arcsins1[1] * np.abs(self.y[0] - x[1, ind]),
                                   self.arcsins1[2] * np.abs(self.x[1] - x[0, ind]),
                                   self.arcsins1[3] * np.abs(self.y[1] - x[1, ind]))).min(axis=0)
