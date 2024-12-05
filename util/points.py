@@ -160,20 +160,20 @@ def get_sample_points_and_weights(multis, dist, n) :
         julia.Main.include("../BSSsubsampling.jl/src/BSSsubsampling.jl")
         points = np.sin(np.random.uniform(low=-3*np.pi/2, high=np.pi/2, size=(multis.dim, 2*n)))
         Y = legendre.evaluate_basis(points, multis)
-        idxs, s = julia.Main.BSSsubsampling.bss(Y, n/multis.size(), A=1, B=1)
+        idxs, s = julia.Main.BSSsubsampling.bss(Y, n/multis.cardinality, A=1, B=1)
         return points[:, idxs-1], cheby_weights(points)
     if dist == 'christoffel' :
-        polys = [ss.legendre(i)*np.sqrt((2*i + 1)) for i in range(multis.maxDegree+1)]
-        polys = [(p*p).integ() for p in polys]
-        d = multis.dim
-        m = multis.cardinality
-        points = np.random.uniform(low=-1, high=1, size=(d, n))
+        polys = legendre.get_polys(multis.maxDegree+1)
+        polys_scdf = [2*(p*p).integ() for p in polys]
+        points = np.random.uniform(low=-1, high=1, size=(multis.dim, n))
         weights = np.zeros((n,))
         for j in range(n) :
-            idx = multis[np.random.randint(low=0, high=m)].asList()
-            for i in range(d) :
-                points[i,j] = bisection(polys[idx[i]], points[i,j])
-            weights[j] = m/np.sum([np.prod([polys[k](points[l,j])**2 for l,k in enumerate(multis[q].asList())]) for q in range(multis.size())])
+            idx = multis[np.random.randint(low=0, high=multis.cardinality)].asList()
+            for i in range(multis.dim) :
+                points[i,j] = bisection(polys_scdf[idx[i]], points[i,j])
+            for q in range(multis.cardinality) :
+                weights[j] += np.prod([polys[k](points[l,j])**2 for l,k in enumerate(multis[q].asList())])
+        weights = multis.cardinality / weights / 2**multis.dim
         return points, weights
 
 

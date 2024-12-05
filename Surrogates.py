@@ -12,7 +12,7 @@ class Legendre :
     """ Surrogate $\\tilde f$ of a (unnormalized density) function $f : [-1,1]^d \\to [0,\\infty)$. """
 
     def __init__(self, *, target: de.TargetDensity, multis: mi.MultiIndexSet, mode='wls', dist='cheby',
-                 resample=False, compute_condnr=False, verbose=0, save=False) :
+                 resample=False, check_gram=False, verbose=0, save=False) :
         """
         Parameters:
         -----------
@@ -36,12 +36,12 @@ class Legendre :
                            Requires installation of https://github.com/felixbartel/BSSsubsampling.jl.
                            Only works with mode='wls'.
             - 'christoffel' : Random points distributed according to the Christoffel measure.
-                              Construction is computationally expensive.
+                              Construction is computationally more expensive than cheby.
             - 'uni' : Uniformly distributed points, not recommended.
         resample : bool
             Specifies whether to resample the WLS points until the corresponding Gramian matrix G satisfies ||G-I|| <= .5.
-        compute_cond : bool
-            Specifies whether to compute the condition number of G-I even if resample==False.
+        check_gram : bool
+            Specifies whether to compute ||G-I|| even if resample==False.
         """
         if verbose > 0: print('\t Surrogate / ', end='')
         util.require.equal(multis.dim, target.dim, 'multis.dim', 'target.dim')
@@ -50,8 +50,9 @@ class Legendre :
         self.multis = multis
         self.target = target
         self.coeffs = None
-        self.cond_nr = -1
+        self.gram_norm = -1
         self.dim = multis.dim
+        self.points = None
 
         if save :
             self.dbo, isnew = db.SurrogateDBO.get_or_create(
@@ -67,7 +68,7 @@ class Legendre :
 
             # Determine number of support nodes
             n = self.multis.cardinality
-            if mode == 'wls': n = 10 * n * int(np.log(n))
+            if mode == 'wls': n = 10 * n * int(np.log(4*n))
             if mode == 'ls':  n = n ** 2
 
             # Setup linear system
@@ -78,12 +79,8 @@ class Legendre :
             ctime = time.process_time() - start
 
             if save :
-                if compute_cond and self.cond == -1 :
-                    if lhs.size == 0 :
-                        self.cond = 0
-                    else :
-                        self.cond = np.linalg.cond(np.dot(lhs.T, lhs) / lhs.shape[0] - np.eye(multis.cardinality))
-                self.dbo.condnr = self.cond
+                if check_gram and self.gram_norm == -1 : self.check_gram_norm(lhs)
+                self.dbo.gram_norm = self.gram_norm
                 self.dbo.ctime = ctime
                 self.dbo.nevals = n
                 self.dbo.coeffs = db.to_string(self.coeffs)
@@ -98,26 +95,34 @@ class Legendre :
 
         if verbose > 0: print('done.')
 
-    def _setup_lhs_rhs(self, mode, dist, resample, n, verbose) :
-        while True :
+    def check_gram_norm(self, lhs) :
+        if self.gram_norm == -1 :
+            if lhs.size == 0 :
+                self.gram_norm = np.squeeze(lhs)
+            else :
+                G_I = lhs.T @ lhs - np.eye(self.multis.cardinality)
+                self.gram_norm = np.linalg.svd(G_I, compute_uv=False)[0]
+
+    def _setup_lhs_rhs(self, mode, dist, resample, n, verbose, max_iter=100) :
+        for _ in range(max_iter) :
 
             # Determine support points and weights
             points, weights = util.points.get_sample_points_and_weights(self.multis, dist, n)
+            self.points = points
 
             # Compute LHS and RHS
             lhs = util.legendre.evaluate_basis(points, self.multis, mode='old')
             rhs = np.squeeze(self.target.evalSqrt(points))
-            if weights is not None:
-                for i in range(lhs.shape[0]):
-                    lhs[i, :] *= weights[i]
-                    rhs[i] *= weights[i]
+            if weights is not None :
+                norm = 2**self.dim / lhs.shape[0]
+                lhs *= np.sqrt(weights[:, np.newaxis] * norm)
+                rhs *= np.sqrt(weights * norm)
 
             if resample:
                 # check matrix
-                G_I = np.dot(lhs.T, lhs) / lhs.shape[0] - np.eye(self.multis.cardinality)
-                self.cond = 0 if lhs.size == 0 else np.linalg.cond(lhs)
-                if verbose > 1 : print(f'\t\t cond = {self.cond}')
-                if self.cond <= .5 :
+                self.check_gram_norm(lhs)
+                if verbose > 1 : print(f'\t\t gram_norm = {self.gram_norm}')
+                if self.gram_norm > 0 and self.gram_norm <= .5 :
                     break
             else :
                 break

@@ -23,6 +23,7 @@ def test_legendre() :
         for t in [de.Gaussian(mean=util.random.points(2, 1), cova=util.random.covarm(2), save=save)] :
             m = mi.TotalDegreeSet(dim=t.dim, order=int(np.ceil(50**(1/t.dim))), save=save)
 
+            # Test call for different point distributions
             for mode, dist in [('wls', 'cheby'), ('ip', 'leja'), ('ip', 'leggaus')] :
                 s = su.Legendre(multis=m, target=t, mode=mode, dist=dist, save=save)
                 s.eval(util.random.points(t.dim))
@@ -32,6 +33,12 @@ def test_legendre() :
                                                 + str(e.nevals).ljust(6) + ' {:.4f}'.format(e.hedist))
                 e.deleteDbo()
                 s.deleteDbo()
+
+
+            # Test resampling for christoffel points
+            s = su.Legendre(multis=m, target=t, mode='wls', dist='christoffel', resample=True, save=save)
+            assert(s.gram_norm <= .5)
+
             t.deleteDbo()
             m.deleteDbo()
 

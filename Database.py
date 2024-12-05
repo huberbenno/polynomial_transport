@@ -86,14 +86,12 @@ class SurrogateDBO(BaseModel) :
     target_id = pw.IntegerField()
     multis    = pw.TextField()
     multis_id = pw.IntegerField()
-    mode   = pw.TextField()
-    dist   = pw.TextField()
-    condnr = pw.DoubleField(null=True)
-    closei = pw.DoubleField(null=True)
-
-    nevals = pw.IntegerField(null=True)
-    coeffs = pw.TextField(null=True)
-    ctime  = pw.DoubleField(null=True)
+    mode      = pw.TextField()
+    dist      = pw.TextField()
+    gram_norm = pw.DoubleField(null=True)
+    nevals    = pw.IntegerField(null=True)
+    coeffs    = pw.TextField(null=True)
+    ctime     = pw.DoubleField(null=True)
 
 
 class SurrogateEvalDBO(BaseModel):
