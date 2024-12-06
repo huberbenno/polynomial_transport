@@ -43,7 +43,7 @@ def plot_density(*, density=None, grid=None, samples=None, ax=None, fig=None, fi
     # grid
     if grid is not None :
         for line in grid :
-            ax.plot(line[0], line[1], '#c8c8c8', lw=2, zorder=2)
+            ax.plot(line[0], line[1], '#c8c8c8', lw=1, zorder=2)
     # samples
     if samples is not None :
         ax.scatter(samples[0], samples[1], s=7, color='k', alpha=.9, zorder=3)
