@@ -42,24 +42,11 @@ def get_integrated_products(m, x) :
     return p_x[:-1], res[:-1, :-1]
 
 
-def evaluate_basis(x, multis, mode='') :
+def evaluate_basis(x, multis) :
     """
     x : np.array with shape=(d,n)
     """
-
-    if mode == 'old' :
-        indices = multis.asLists()
-        m = multis.cardinality
-        assert m == len(indices)
-
-        van = legvander(x, multis.maxDegree)  # shape = (d, n, max(indices)+1)
-
-        map1 = lambda l : np.sqrt((2*l + 1)/2)  # legvander is normalized to P(1)=1, we need normalization wrt L2
-        map2 = lambda q : van[q[0],:,q[1]]
-
-        return np.array([math.prod(map(map1, idx))*math.prod(map(map2, enumerate(idx))) for idx in indices]).T
-
-    I = np.array(multis.asLists())  # shape = (d, n)
-    V = legvander(x, multis.maxDegree)  # shape = (d, n, multis.maxDegree+1)
-    R = np.prod([V[i,:,I[:,i]] for i in range(multis.dim)], axis=0).T  # shape = (n,m)
-    return np.multiply(R, multis.getWeightsForLegendreL2Normalization())
+    indices = np.array(multis.asLists())
+    van = legvander(x, multis.maxDegree) * np.sqrt((2 * np.arange(0, multis.maxDegree + 1) + 1) / 2)
+    map2 = lambda q: van[q[0], :, q[1]]
+    return np.array([math.prod(map(map2, enumerate(idx))) for idx in indices]).T

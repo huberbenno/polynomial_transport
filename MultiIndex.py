@@ -47,7 +47,6 @@ class MultiIndexSet :
 
         self.maxDegree = max(self.maxOrders)
         self.cardinality = len(self.idxs)
-        self.weightsForLegendreL2Normalization = None
 
     def __getitem__(self, i) : return self.idxs[i]
 
@@ -56,11 +55,6 @@ class MultiIndexSet :
     def print(self) :
         for idx in self.idxs :
             idx.print()
-
-    def getWeightsForLegendreL2Normalization(self) :
-        if self.weightsForLegendreL2Normalization is None :
-            self.weightsForLegendreL2Normalization = np.array([np.prod([np.sqrt((2*l + 1)/2) for l in idx.asList()]) for idx in self.idxs])
-        return self.weightsForLegendreL2Normalization
 
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()

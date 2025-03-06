@@ -1,4 +1,3 @@
-import time
 import numpy as np
 
 from util import legendre, require, random
@@ -34,29 +33,13 @@ def test_get_integrated_products() :
 
 def test_evaluate_basis_equality():
     multis = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4, 1/.3]), cardinality=7)
+    polys = legendre.get_polys(20)
 
-    for _ in range(100):
-        x = random.points(multis.dim, 1)
-        r_new = legendre.evaluate_basis(x, multis)
-        r_old = legendre.evaluate_basis(x, multis, 'old')
-        assert r_old.dtype == r_new.dtype
-        require.close(r_old, r_new)
+    n = 100
+    x = random.points(multis.dim, n)
+    r = legendre.evaluate_basis(x, multis)
 
-
-def test_evaluate_basis_runtime() :
-
-    multis = mi.AnisotropicSet(weights=np.log([1/.6, 1/.4, 1/.3]), cardinality=7)
-
-    start = time.process_time()
-    for _ in range(100) :
-        x = random.points(multis.dim, 1)
-        r_new = legendre.evaluate_basis(x, multis)
-    time_old = time.process_time() - start
-
-    start = time.process_time()
-    for _ in range(100) :
-        x = random.points(multis.dim, 1)
-        r_old = legendre.evaluate_basis(x, multis, 'old')
-    time_new = time.process_time() - start
-
-    print(f'Runtime old : {time_old} / Runtime new : {time_new}')
+    for i in range(n) :
+        for j in range(multis.cardinality) :
+            r_ij = np.prod([polys[deg](x[dim,i]) for dim, deg in enumerate(multis[j].asList())])
+            require.close(r[i,j], r_ij)

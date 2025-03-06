@@ -111,7 +111,7 @@ class Legendre :
             self.points = points
 
             # Compute LHS and RHS
-            lhs = util.legendre.evaluate_basis(points, self.multis, mode='old')
+            lhs = util.legendre.evaluate_basis(points, self.multis)
             rhs = np.squeeze(self.target.evalSqrt(points))
             if weights is not None :
                 norm = 2**self.dim / lhs.shape[0]
@@ -122,7 +122,7 @@ class Legendre :
                 # check matrix
                 self.check_gram_norm(lhs)
                 if verbose > 1 : print(f'\t\t gram_norm = {self.gram_norm}')
-                if self.gram_norm > 0 and self.gram_norm <= .5 :
+                if 0 < self.gram_norm <= .5:
                     break
             else :
                 break
@@ -149,6 +149,3 @@ class Legendre :
 
     def deleteDbo(self) :
         if hasattr(self, 'dbo') : self.dbo.delete_instance()
-
-    #TODO move legendreutil.evaluate_basis here
-
