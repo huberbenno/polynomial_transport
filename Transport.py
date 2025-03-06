@@ -18,29 +18,10 @@ class TransportMap :
         x = np.atleast_1d(np.squeeze(np.array(x)))
         assert len(x.shape) == 1 and len(x) == self.d
 
-        S = np.zeros((self.d,))
-
         s = self.surrogate.norm_lebesgue
-
+        S = np.zeros((self.d,))
         for i in range(self.d) :
-            L, I = util.legendre.get_integrated_products(self.multitree.maxOrders[i] + 1, x[i])
-            r = 0
-            ss = 0
-
-            for n in self.multitree[i+1] :
-
-                v = [c.val for c in n.children]
-                j = [c.idx for c in n.children]
-
-                r += np.dot(v, np.dot(I[np.ix_(j,j)], v))
-
-                if i < self.d-1 :
-                    n.val = np.dot(v, L[j])
-                    ss += n.val**2
-
-            S[i] = 2*r/s - 1
-            s = ss
-
+            S[i], s = self.eval_i(i, x[i], s)
         return S
 
     def eval_i(self, i, x, s) :
@@ -72,36 +53,12 @@ class TransportMap :
 
             for _ in range(30) : # 2^-14 < 1e-4
                 candidate_i, ss = self.eval_i(i, x[i], s)
-
                 if candidate_i > y[i] :
                     interval = [interval[0],  x[i]]
                 else :
                     interval = [x[i], interval[1]]
-
                 x[i] = midpoint(interval)
             s = ss
-
-        return x
-
-    def inveval_old(self, y) :
-        midpoint = lambda interval : interval[0] + (interval[1] - interval[0])/2
-
-        x = np.zeros((self.d,))
-        candidate = self.eval(x)
-
-        for i in range(self.d) :
-
-            interval = [-1,1]
-
-            for _ in range(30) : # 2^-14 < 1e-4
-
-                if candidate[i] > y[i] :
-                    interval = [interval[0],  x[i]]
-                else :
-                    interval = [x[i], interval[1]]
-
-                x[i] = midpoint(interval)
-                candidate = self.eval(x)
 
         return x
 
