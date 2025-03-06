@@ -105,15 +105,6 @@ class TransportMap :
 
         return x
 
-    def density_sqrt(self, x) :
-        return np.dot(util.legendre.evaluate_basis(np.expand_dims(x, axis=1), self.multiset), self.coeffs)[0]
-
-    def density(self, x) :
-        return self.density_sqrt(x)**2
-
-    def det_dS(self, x) :
-        return self.density(x) / self.norm_lebesgue
-
     def samples(self, n, p_uni=None) :
         if p_uni is None :
             p_uni = util.random.points(2, n)
