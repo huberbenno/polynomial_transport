@@ -36,13 +36,15 @@ In a shell, simply run `pytest` in order to execute the basic unit tests in the 
 
 ## Citation
 
-If you found this library useful in your research, please consider citing [the paper](https://arxiv.org/abs/2311.04172):
+If you found this library useful in your research, please consider citing [the paper](https://www.aimsciences.org/article/id/67bd87d56ef6c1651cb04f04):
 
 ```
-@article{westermann2023measure,
+@article{westermann2025measure,
   title={Measure transport via polynomial density surrogates},
   author={Westermann, Josephine and Zech, Jakob},
-  journal={arXiv preprint arXiv:2311.04172},
-  year={2023}
+  journal={Foundations of Data Science},
+  year={2025},
+  doi={10.3934/fods.2025001},
+  url={https://www.aimsciences.org/article/id/67bd87d56ef6c1651cb04f04},
 }
 ```
