@@ -1,7 +1,7 @@
 import numpy as np
 
-import util
-import Database as db
+from polynomial_transport import util
+# from . import Database as db
 
 
 class Forward :

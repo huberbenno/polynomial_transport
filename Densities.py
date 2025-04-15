@@ -2,9 +2,9 @@ import numpy as np
 from numpy.polynomial.legendre import legvander
 import copy
 
-import util
-import Database as db
-import Forward as fw
+from polynomial_transport import util
+# from . import Database as db
+from . import Forward as fw
 
 #TODO allow to provide a function handle
 

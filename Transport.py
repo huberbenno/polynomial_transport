@@ -1,7 +1,7 @@
 import numpy as np
 
-import util
-import MultiIndex as mi
+from polynomial_transport import util
+from . import MultiIndex as mi
 
 
 class TransportMap :

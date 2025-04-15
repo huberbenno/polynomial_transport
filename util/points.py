@@ -2,7 +2,7 @@ import numpy as np
 import scipy.special as ss
 import itertools
 
-import MultiIndex as mi
+from polynomial_transport import MultiIndex as mi
 from . import random, legendre
 
 

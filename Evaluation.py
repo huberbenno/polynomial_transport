@@ -1,10 +1,10 @@
 import numpy as np
 import time
 
-import util
-import MultiIndex as mi
-import Database as db
-import Densities as de
+from polynomial_transport import util
+from . import MultiIndex as mi
+# from . import Database as db
+from . import Densities as de
 
 
 class SurrogateEvaluation :

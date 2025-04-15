@@ -1,8 +1,8 @@
 import numpy as np
 import itertools as it
 
-import util
-import Database as db
+from polynomial_transport import util
+# from . import Database as db
 
 
 class MultiIndex :
